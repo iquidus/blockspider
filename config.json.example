@@ -1,0 +1,30 @@
+{
+  "chainId": 8,
+  "crawler": {
+    "start": 0,
+    "interval": "1000ms",
+    "routines": 1,
+    "cache": 128,
+    "kafka": {
+      "events": [
+        {
+          "broker": "localhost:9092",
+          "topic": "events",
+          "addresses": [],
+          "topics": []
+        }
+      ],
+      "blocks": {
+        "broker": "localhost:9092",
+        "topic": "blocks"
+      }
+    }
+  },
+  "rpc": {
+    "type": "http",
+    "endpoint": "http://127.0.0.1:8079"
+  },
+  "state": {
+    "path": "/Users/iquidus/blockspider/ubiq.json"
+  }
+}
