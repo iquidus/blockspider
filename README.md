@@ -1,6 +1,6 @@
-# BlockSpider
+# blockspider
 
-An open source block crawler and kafka producer.
+An open source blockchain crawler and kafka producer.
 
 ### Requires
 
