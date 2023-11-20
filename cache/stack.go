@@ -21,7 +21,7 @@ func New[E any](limit *int) *BlockStack[E] {
 // Push item to head of stack.
 // Removes tail if we are at limit
 func (s *BlockStack[E]) Push(item E) {
-	n := node[E] {
+	n := node[E]{
 		item: item,
 	}
 	s.addToHead(&n)
@@ -50,13 +50,13 @@ func (s *BlockStack[E]) Peak() (E, error) {
 }
 
 // Return number of items in stack
-func (s *BlockStack[E]) Count() (int) {
+func (s *BlockStack[E]) Count() int {
 	return s.count
 }
 
 // Flattens items into a slice with head at index 0
 // WARNING: O(n) only use for debugging
-func (s *BlockStack[E]) items() ([]E) {
+func (s *BlockStack[E]) items() []E {
 	var items []E
 	if s.head != nil {
 		var head *node[E] = s.head
@@ -76,4 +76,3 @@ func (s *BlockStack[E]) items() ([]E) {
 func (s *BlockStack[E]) String() string {
 	return fmt.Sprintf("%v", s.items())
 }
-

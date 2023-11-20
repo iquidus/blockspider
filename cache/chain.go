@@ -9,17 +9,17 @@ type node[E any] struct {
 
 // The chain - a doubly-linked list with optional limit
 type chain[E any] struct {
-	head *node[E] // top of list
-	tail *node[E] // bottom of list
-	count int // number of nodes in list
-	limit *int // max allowed nodes in list (nil = no max)
+	head  *node[E] // top of list
+	tail  *node[E] // bottom of list
+	count int      // number of nodes in list
+	limit *int     // max allowed nodes in list (nil = no max)
 }
 
 // Create a new chain and return a pointer to it
 func newChain[E any](limit *int) *chain[E] {
 	return &chain[E]{
-		head: nil,
-		tail: nil,
+		head:  nil,
+		tail:  nil,
 		count: 0,
 		limit: limit,
 	}
@@ -55,7 +55,7 @@ func (l *chain[E]) removeHead() *node[E] {
 	} else {
 		l.head = nil
 	}
-	
+
 	// remove from count
 	l.count--
 	return oldHead

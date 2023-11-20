@@ -8,7 +8,7 @@ func TestNew(t *testing.T) {
 	// with no limit
 	bc := New[int](nil)
 	got := bc.count
-	if  got != 0 {
+	if got != 0 {
 		t.Errorf("New (no limit) count = %d; want 0;", got)
 	}
 	if bc.limit != nil {
@@ -20,7 +20,7 @@ func TestNewWithLimit(t *testing.T) {
 	limit := 512
 	bc := New[int](&limit)
 	got := bc.count
-	if  got != 0 {
+	if got != 0 {
 		t.Errorf("New (with limit) count = %d; want 0;", got)
 	}
 	if *bc.limit != limit {
@@ -33,9 +33,9 @@ func TestPush(t *testing.T) {
 	bc := New[int](nil)
 
 	bc.Push(item)
-	
+
 	got := bc.head.item
-	if  got != item {
+	if got != item {
 		t.Errorf("TestPush item = %d; want %d;", got, item)
 	}
 }
@@ -55,14 +55,14 @@ func TestPop(t *testing.T) {
 	}
 	// head is set nil if last item popped
 	if bc.head != nil {
-		t.Errorf("TestPop head = %d; want nil;", bc.head.item)		
+		t.Errorf("TestPop head = %d; want nil;", bc.head.item)
 	}
 	// count is 0 if last item popped
 	if bc.count != 0 {
-		t.Errorf("TestPop count = %d; want 0;", bc.count)		
+		t.Errorf("TestPop count = %d; want 0;", bc.count)
 	}
 	// with empty stack
-	got, err = bc.Pop()
+	_, err = bc.Pop()
 	if err == nil {
 		t.Errorf("TestPop count = %d; want 0;", bc.count)
 	}
@@ -92,8 +92,8 @@ func TestCount(t *testing.T) {
 	// with n items in stack
 	want := 3
 	for i := 0; i < want; i++ {
-		bc.Push(i+1)
-	} 
+		bc.Push(i + 1)
+	}
 	got = bc.Count()
 	if got != want {
 		t.Errorf("TestCount count = %d; want %d;", got, want)
@@ -115,7 +115,7 @@ func TestString(t *testing.T) {
 func TestLimit(t *testing.T) {
 	limit := 10
 	bc := New[int](&limit)
-	for i := 1; i <= limit + 10; i++ {
+	for i := 1; i <= limit+10; i++ {
 		bc.Push(i)
 	}
 	if bc.count != limit {

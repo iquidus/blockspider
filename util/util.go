@@ -13,7 +13,6 @@ import (
 )
 
 func MakeTimestamp() int64 {
-
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
@@ -33,7 +32,6 @@ func FloatToString(f float64) string {
 }
 
 func BigFloatToString(f *big.Float, prec int) string {
-
 	s := f.String()
 
 	r := strings.Split(s, ".")
@@ -76,7 +74,6 @@ func DecodeHex(str string) uint64 {
 }
 
 func DecodeValueHex(val string) string {
-
 	if len(val) < 2 || val == "0x0" {
 		return "0"
 	}

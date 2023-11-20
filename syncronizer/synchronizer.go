@@ -1,7 +1,6 @@
 package syncronizer
 
 func (s *Synchronizer) startTaskHandler() {
-
 	// As tasks are created with s.AddLink, and block at task.Link(), this goroutine will
 	// receive them from the channel; it waits until the tasks calls t.Link() (if it didn't already),
 	// resumes execution and waits for it to finish, doing this for each task until
@@ -52,7 +51,6 @@ func (s *Synchronizer) startTaskHandler() {
 		if s.aborted {
 			s.flushTasks()
 		}
-		return
 	}()
 }
 
@@ -66,7 +64,6 @@ type Synchronizer struct {
 // queues it for execution
 
 func (s *Synchronizer) AddLink(body func(*Task)) {
-
 	if s.aborted {
 		return
 	}
@@ -83,8 +80,6 @@ func (s *Synchronizer) AddLink(body func(*Task)) {
 	go nr.run()
 
 	s.routines <- nr
-
-	return
 }
 
 // Finish hangs until all tasks have completed executions, and there are no more tasks
@@ -150,5 +145,4 @@ loop:
 			}
 		}
 	}
-	return
 }

@@ -24,7 +24,6 @@ type RPCClient struct {
 }
 
 func dialNewClient(cfg *Config) (*rpc.Client, error) {
-
 	var (
 		client *rpc.Client
 		err    error
@@ -57,7 +56,6 @@ func dialNewClient(cfg *Config) (*rpc.Client, error) {
 }
 
 func NewRPCClient(cfg *Config) *RPCClient {
-
 	client, err := dialNewClient(cfg)
 	if err != nil {
 		log.Error("could not dial rpc client", "err", err)

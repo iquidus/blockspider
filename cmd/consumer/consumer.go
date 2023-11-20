@@ -26,15 +26,15 @@ func handleMessages(ctx context.Context, messages chan gkafka.Message, commits c
 
 func main() {
 	const (
-		topic = "blocks"
-	 	groupId = "example2"
+		topic    = "blocks"
+		groupId  = "example2"
 		chanSize = 1000
 	)
 
 	var (
-		ctx = context.Background()
+		ctx      = context.Background()
 		messages = make(chan gkafka.Message, chanSize)
-		commits = make(chan gkafka.Message, chanSize)
+		commits  = make(chan gkafka.Message, chanSize)
 	)
 
 	kReader := kafka.NewReader([]string{"localhost:9092"}, topic, groupId)
@@ -57,4 +57,3 @@ func main() {
 		log.Fatalln(err)
 	}
 }
-

@@ -14,7 +14,7 @@ type Reader struct {
 func NewReader(brokers []string, topic string, groupId string) *Reader {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: brokers,
-		Topic: topic,
+		Topic:   topic,
 		GroupID: groupId,
 	})
 
@@ -32,9 +32,9 @@ func (k *Reader) FetchMessage(ctx context.Context, messages chan<- kafka.Message
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case messages <- message: 
+		case messages <- message:
 			log.Printf("message fetched and sent to channel: %v \n", string(message.Value))
-		}	
+		}
 	}
 }
 
@@ -47,7 +47,7 @@ func (k *Reader) CommitMessages(ctx context.Context, commits <-chan kafka.Messag
 			if err != nil {
 				return err
 			}
-			log.Printf("commited a msg: %v \n", string(message.Value))
+			log.Printf("committed a msg: %v \n", string(message.Value))
 		}
 	}
 }

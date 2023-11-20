@@ -33,7 +33,7 @@ func (c *Crawler) crawlBlocks() {
 
 	// get local head
 	state, err := c.state.Get()
-	if err != nil || state == nil{
+	if err != nil || state == nil {
 		c.logger.Error("couldn't get head from state", "err", err)
 		return
 	}
@@ -117,19 +117,18 @@ func (c *Crawler) validateBlock() (*common.RawBlock, *common.RawBlock, bool, err
 }
 
 func (c *Crawler) reorg() error {
-	
 	var commonAncestor *common.RawBlock
 	sidechainmap := make(map[string]common.RawBlock)
 	sidechain := []common.RawBlock{}
 	dropped := []common.RawBlock{}
-	
+
 	for {
 		// loop until common ancestor is found
 		if commonAncestor == nil {
 			// compare local "head" against remote block
-			b, d, ok, _ := c.validateBlock();
+			b, d, ok, _ := c.validateBlock()
 			if !ok && b != nil {
-				// if compare fails check to make sure we are not already 
+				// if compare fails check to make sure we are not already
 				// handling this block
 				_, e := sidechainmap[b.Number]
 				if !e {
@@ -149,7 +148,7 @@ func (c *Crawler) reorg() error {
 			}
 		}
 	}
-	
+
 	// log common ancenstor
 	c.logger.Warn("Common ancestor found", "block", util.DecodeHex(commonAncestor.Number), "hash", commonAncestor.Hash)
 	// common ancestor was popped of the chain during above loop, push it back on
@@ -165,7 +164,7 @@ func (c *Crawler) reorg() error {
 	}
 
 	// process new blocks
-	for i := len(sidechain)-1; i >= 0; i-- {
+	for i := len(sidechain) - 1; i >= 0; i-- {
 		c.cache.Push(sidechain[i])
 		c.logger.Info("Adding remote block", "number", util.DecodeHex(sidechain[i].Number), "hash", sidechain[i].Hash)
 		err := c.sendBlockMessage(dropped[i])
@@ -173,25 +172,24 @@ func (c *Crawler) reorg() error {
 			return errors.New("Failed to send reorg hook: " + err.Error())
 		}
 	}
-	
+
 	return nil
 }
 
 type BlocksPayload struct {
-	Method string `json:"method"`
-	Block common.RawBlock `json:"block"`
+	Method string          `json:"method"`
+	Block  common.RawBlock `json:"block"`
 }
 
 type EventsPayload struct {
-	Method string `json:"method"`
+	Method string         `json:"method"`
 	Events []common.TxLog `json:"events"`
 }
 
 func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
-
 	var bp = BlocksPayload{
 		Method: "PUSH",
-		Block: block,
+		Block:  block,
 	}
 
 	payload, err := json.Marshal(bp)
@@ -200,7 +198,7 @@ func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
 	}
 
 	err = c.blockWriter.WriteMessages(context.Background(), payload)
-	
+
 	if err != nil {
 		c.logger.Error("failed to write messages", "err", err)
 	}
@@ -211,7 +209,7 @@ func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
 func (c *Crawler) sendReorgHooks(block common.RawBlock) error {
 	var bp = BlocksPayload{
 		Method: "POP",
-		Block: block,
+		Block:  block,
 	}
 
 	payload, err := json.Marshal(bp)
@@ -251,7 +249,7 @@ func (c *Crawler) syncBlock(block common.RawBlock, task *syncronizer.Task) {
 	parent, err := c.cache.Peak()
 	if err == nil {
 		if parent.Hash != block.ParentHash {
-			// A reorg has occured
+			// A reorg has occurred
 			c.logger.Warn("Chain reorg detected", "parent", util.DecodeHex(parent.Number), "hash", parent.Hash, "block", util.DecodeHex(block.Number), "hash", block.Hash, "parent", block.ParentHash)
 			err := c.reorg()
 			if err != nil {
@@ -282,7 +280,7 @@ func (c *Crawler) syncBlock(block common.RawBlock, task *syncronizer.Task) {
 
 	// TODO(iquidus): Running a getlogs with each filter is expensive
 	// 	              migrate to a single getlogs call (or derive from block itself), and filter locally
-	
+
 	// handle getlogs requests
 	logopts := c.cfg.Kafka.Events
 	for i := 0; i < len(logopts); i++ {

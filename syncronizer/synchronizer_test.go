@@ -55,14 +55,12 @@ var testTable = []struct{ maxRoutines, routines, abortAt int }{
 }
 
 func SyncFunc(maxRoutines, routines int) bool {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
 		sync.AddLink(func(r *Task) {
 			r.Link()
 			time.Sleep(1 * time.Millisecond)
-
 		})
 	}
 
@@ -70,7 +68,6 @@ func SyncFunc(maxRoutines, routines int) bool {
 }
 
 func NestedSyncFunc(maxRoutines, routines int) bool {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
@@ -88,52 +85,37 @@ func NestedSyncFunc(maxRoutines, routines int) bool {
 			}
 
 			ns.Finish()
-
 		})
 	}
-
 	return sync.Finish()
 }
 
 func AbortBeforeSyncFunc(t *testing.T, maxRoutines, routines, abortAt int) {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
 		it := i
 		sync.AddLink(func(r *Task) {
-
 			if it == abortAt {
-				//fmt.Println("routine_"+strconv.FormatInt(int64(it), 10), "closing")
 				r.AbortSync()
-				//fmt.Println("routine_"+strconv.FormatInt(int64(it), 10), " should've closed")
-
 			}
-
 			closed := r.Link()
-
 			if closed {
 				return
 			}
-
 			time.Sleep(1 * time.Millisecond)
-
 		})
-
 	}
 
 	f := sync.Finish()
-
 	if f {
 		t.Log("Sync aborted successfully")
 	} else {
 		t.Fatalf("failed to abort sync")
 	}
-
 }
 
 func AbortAfterSyncFunc(t *testing.T, maxRoutines, routines, abortAt int) {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
@@ -151,7 +133,6 @@ func AbortAfterSyncFunc(t *testing.T, maxRoutines, routines, abortAt int) {
 			}
 
 			time.Sleep(1 * time.Millisecond)
-
 		})
 	}
 
@@ -162,11 +143,9 @@ func AbortAfterSyncFunc(t *testing.T, maxRoutines, routines, abortAt int) {
 	} else {
 		t.Fatalf("failed to abort sync")
 	}
-
 }
 
 func BlockSyncFunc(maxRoutines, routines int) bool {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
@@ -185,12 +164,10 @@ func BlockSyncFunc(maxRoutines, routines int) bool {
 }
 
 func AsyncBlockSyncFunc(maxRoutines, routines int) bool {
-
 	sync := NewSync(maxRoutines)
 
 	for i := 0; i < routines; i++ {
 		sync.AddLink(func(r *Task) {
-
 			_ = fetchBlock(uint64(i))
 
 			closed := r.Link()
@@ -205,7 +182,6 @@ func AsyncBlockSyncFunc(maxRoutines, routines int) bool {
 }
 
 func TestSync(t *testing.T) {
-
 	for k, v := range testTable {
 		t.Run("test_"+strconv.FormatInt(int64(k), 10), func(t *testing.T) {
 			t.Logf("start test n.%v with %v routines, %v maxRoutines", k, v.routines, v.maxRoutines)
@@ -217,11 +193,9 @@ func TestSync(t *testing.T) {
 			t.Logf("test n.%v with %v routines, %v maxRoutines took %v; aborted %v", k, v.routines, v.maxRoutines, end, val)
 		})
 	}
-
 }
 
 func TestNestedSync(t *testing.T) {
-
 	for k, v := range testTable {
 		t.Run("test_"+strconv.FormatInt(int64(k), 10), func(t *testing.T) {
 			t.Logf("start test n.%v with %v routines, %v maxRoutines", k, v.routines, v.maxRoutines)
@@ -233,7 +207,6 @@ func TestNestedSync(t *testing.T) {
 			t.Logf("test n.%v with %v routines, %v maxRoutines took %v; aborted %v", k, v.routines, v.maxRoutines, end, val)
 		})
 	}
-
 }
 
 func TestSyncAbort(t *testing.T) {
@@ -255,7 +228,6 @@ func TestSyncAbort(t *testing.T) {
 }
 
 func TestSyncBlocks(t *testing.T) {
-
 	for k, v := range testTable {
 		t.Run("test_"+strconv.FormatInt(int64(k), 10), func(t *testing.T) {
 			t.Logf("start test n.%v with %v routines, %v maxRoutines", k, v.routines, v.maxRoutines)
@@ -267,23 +239,10 @@ func TestSyncBlocks(t *testing.T) {
 			t.Logf("test n.%v with %v routines, %v maxRoutines took %v; val == %v", k, v.routines, v.maxRoutines, end, val)
 		})
 	}
-
-	//for k, v := range testTable {
-	//	t.Logf("start test n.%v with %v routines, %v maxRoutines", k, v.routines, v.maxRoutines)
-	//
-	//	start := time.Now()
-	//	val := BlockSyncFunc(v.maxRoutines, v.routines)
-	//	end := time.Since(start)
-	//
-	//	t.Logf("test n.%v with %v routines, %v maxRoutines took %v; val == %v", k, v.routines, v.maxRoutines, end, val)
-	//}
-
 }
 
 func BenchmarkSync(b *testing.B) {
-
 	for k, v := range testTable {
-
 		n := strconv.FormatInt(int64(k), 10)
 
 		b.Run("bench n."+n, func(b *testing.B) {

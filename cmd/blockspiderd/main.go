@@ -87,10 +87,10 @@ func main() {
 		log.Error("could not initialize state", "err", err)
 		os.Exit(1)
 	}
-	
+
 	// TODO(iquidus): init kafka here, check for topics, create if they dont exist.
 	go startCrawler(&cfg.Crawler, state, rpcClient, appLogger)
-	
+
 	quit := make(chan int)
 	<-quit
 }

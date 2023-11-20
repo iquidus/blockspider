@@ -12,7 +12,6 @@ import (
 // the syncronizer know it can quit
 
 func NewSync(maxRoutines int) *Synchronizer {
-
 	if maxRoutines == 0 {
 		log.Error("Error, cannot start sync with 0 maxroutines, should be atleast 1")
 		os.Exit(1)
