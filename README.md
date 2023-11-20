@@ -17,7 +17,7 @@ git clone https://github.com/iquidus/blockspider blockspider
 ### build
 
 ```shell
-cd blockspider && make spiderd
+cd blockspider && make blockspiderd
 ```
 
 ### Configure
@@ -65,7 +65,7 @@ _Make required changes in config.json_
 ### Run
 
 ```shell
-./build/bin spiderd -c config.json
+./build/bin blockspiderd -c config.json
 ```
 
 ### Kafka
