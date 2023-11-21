@@ -46,11 +46,10 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 
 	//"regexp"
@@ -63,6 +62,19 @@ import (
 )
 
 var (
+	// This is the version of Go that will be downloaded by
+	//
+	//     go run ci.go install -dlgo
+	dlgoVersion = "1.20.7"
+
+	// This is the version of Go that will be used to bootstrap the PPA builder.
+	//
+	// This version is fine to be old and full of security holes, we just use it
+	// to build the latest Go. Don't change it. If it ever becomes insufficient,
+	// we need to switch over to a recursive builder to jumpt across supported
+	// versions.
+	gobootVersion = "1.19.6"
+
 	// Files that end up in the blockspider*.zip archive.
 	archiveFiles = []string{
 		"COPYING",
@@ -99,113 +111,101 @@ func main() {
 
 // Compiling
 
+
 func doInstall(cmdline []string) {
 	var (
-		arch = flag.String("arch", "", "Architecture to cross build for")
-		cc   = flag.String("cc", "", "C compiler to cross build with")
+		dlgo       = flag.Bool("dlgo", false, "Download Go and build with it")
+		arch       = flag.String("arch", "", "Architecture to cross build for")
+		cc         = flag.String("cc", "", "C compiler to cross build with")
+		staticlink = flag.Bool("static", false, "Create statically-linked executable")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
-	// Check Go version. People regularly open issues about compilation
-	// failure with outdated Go. This should save them the trouble.
-	if !strings.Contains(runtime.Version(), "devel") {
-		// Figure out the minor version number since we can't textually compare (1.10 < 1.9)
-		var minor int
-		fmt.Sscanf(strings.TrimPrefix(runtime.Version(), "go1."), "%d", &minor)
+	// Configure the toolchain.
+	tc := build.GoToolchain{GOARCH: *arch, CC: *cc}
+	if *dlgo {
+		csdb := build.MustLoadChecksums("build/checksums.txt")
+		tc.Root = build.DownloadGo(csdb, dlgoVersion)
+	}
 
-		if minor < 20 {
-			log.Println("You have Go version", runtime.Version())
-			log.Println("Go version 1.20 or greater is required. Please upgrade your Go installation.")
-			os.Exit(1)
-		}
-	}
-	// Compile packages given as arguments, or everything if there are no arguments.
-	packages := []string{"./..."}
-	if flag.NArg() > 0 {
-		packages = flag.Args()
-	}
-	packages = build.ExpandPackagesNoVendor(packages)
+	// Disable CLI markdown doc generation in release builds.
+	buildTags := []string{"urfave_cli_no_docs"}
 
-	if *arch == "" || *arch == runtime.GOARCH {
-		goinstall := goTool("install", buildFlags(env)...)
-		goinstall.Args = append(goinstall.Args, "-v")
-		goinstall.Args = append(goinstall.Args, packages...)
-		build.MustRun(goinstall)
-		return
+	// Enable linking the CKZG library since we can make it work with additional flags.
+	if env.UbuntuVersion != "trusty" {
+		buildTags = append(buildTags, "ckzg")
 	}
-	// If we are cross compiling to ARMv5 ARMv6 or ARMv7, clean any previous builds
-	if *arch == "arm" {
-		os.RemoveAll(filepath.Join(runtime.GOROOT(), "pkg", runtime.GOOS+"_arm"))
-		for _, path := range filepath.SplitList(build.GOPATH()) {
-			os.RemoveAll(filepath.Join(path, "pkg", runtime.GOOS+"_arm"))
-		}
-	}
-	// Seems we are cross compiling, work around forbidden GOBIN
-	goinstall := goToolArch(*arch, *cc, "install", buildFlags(env)...)
-	goinstall.Args = append(goinstall.Args, "-v")
-	goinstall.Args = append(goinstall.Args, []string{"-buildmode", "archive"}...)
-	goinstall.Args = append(goinstall.Args, packages...)
-	build.MustRun(goinstall)
 
-	if cmds, err := os.ReadDir("cmd"); err == nil {
-		for _, cmd := range cmds {
-			pkgs, err := parser.ParseDir(token.NewFileSet(), filepath.Join(".", "cmd", cmd.Name()), nil, parser.PackageClauseOnly)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for name := range pkgs {
-				if name == "main" {
-					gobuild := goToolArch(*arch, *cc, "build", buildFlags(env)...)
-					gobuild.Args = append(gobuild.Args, "-v")
-					gobuild.Args = append(gobuild.Args, []string{"-o", executablePath(cmd.Name())}...)
-					gobuild.Args = append(gobuild.Args, "."+string(filepath.Separator)+filepath.Join("cmd", cmd.Name()))
-					build.MustRun(gobuild)
-					break
-				}
-			}
-		}
+	// Configure the build.
+	gobuild := tc.Go("build", buildFlags(env, *staticlink, buildTags)...)
+
+	// arm64 CI builders are memory-constrained and can't handle concurrent builds,
+	// better disable it. This check isn't the best, it should probably
+	// check for something in env instead.
+	if env.CI && runtime.GOARCH == "arm64" {
+		gobuild.Args = append(gobuild.Args, "-p", "1")
+	}
+
+	/*
+		TODO(meowsbits): The -trimpath flag is commented because it breaks openrpc discovery, for which
+		reflection/AST-parsing gets broken when paths are not full.
+		Is there a better solve for this? Can we just turn reflection off for the geth build?
+	*/
+	// We use -trimpath to avoid leaking local paths into the built executables.
+	// gobuild.Args = append(gobuild.Args, "-trimpath")
+
+	// Show packages during build.
+	gobuild.Args = append(gobuild.Args, "-v")
+
+	// Now we choose what we're even building.
+	// Default: collect all 'main' packages in cmd/ and build those.
+	packages := flag.Args()
+	if len(packages) == 0 {
+		packages = build.FindMainPackages("./cmd")
+	}
+
+	// Do the build!
+	for _, pkg := range packages {
+		args := make([]string, len(gobuild.Args))
+		copy(args, gobuild.Args)
+		args = append(args, "-o", executablePath(path.Base(pkg)))
+		args = append(args, pkg)
+		build.MustRun(&exec.Cmd{Path: gobuild.Path, Args: args, Env: gobuild.Env})
 	}
 }
 
-func buildFlags(env build.Environment) (flags []string) {
+// buildFlags returns the go tool flags for building.
+func buildFlags(env build.Environment, staticLinking bool, buildTags []string) (flags []string) {
 	var ld []string
 	if env.Commit != "" {
-		ld = append(ld, "-X", "main.gitCommit="+env.Commit)
+		ld = append(ld, "-X", "github.com/ethereum/go-ethereum/internal/version.gitCommit="+env.Commit)
+		ld = append(ld, "-X", "github.com/ethereum/go-ethereum/internal/version.gitDate="+env.Date)
 	}
+	// Strip DWARF on darwin. This used to be required for certain things,
+	// and there is no downside to this, so we just keep doing it.
 	if runtime.GOOS == "darwin" {
 		ld = append(ld, "-s")
 	}
-
+	if runtime.GOOS == "linux" {
+		// Enforce the stacksize to 8M, which is the case on most platforms apart from
+		// alpine Linux.
+		extld := []string{"-Wl,-z,stack-size=0x800000"}
+		if staticLinking {
+			extld = append(extld, "-static")
+			// Under static linking, use of certain glibc features must be
+			// disabled to avoid shared library dependencies.
+			buildTags = append(buildTags, "osusergo", "netgo")
+		}
+		ld = append(ld, "-extldflags", "'"+strings.Join(extld, " ")+"'")
+	}
 	if len(ld) > 0 {
 		flags = append(flags, "-ldflags", strings.Join(ld, " "))
 	}
+	if len(buildTags) > 0 {
+		flags = append(flags, "-tags", strings.Join(buildTags, ","))
+	}
 	return flags
-}
-
-func goTool(subcmd string, args ...string) *exec.Cmd {
-	return goToolArch(runtime.GOARCH, os.Getenv("CC"), subcmd, args...)
-}
-
-func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd {
-	cmd := build.GoTool(subcmd, args...)
-	cmd.Env = []string{"GOPATH=" + build.GOPATH()}
-	if arch == "" || arch == runtime.GOARCH {
-		cmd.Env = append(cmd.Env, "GOBIN="+GOBIN)
-	} else {
-		cmd.Env = append(cmd.Env, "CGO_ENABLED=1")
-		cmd.Env = append(cmd.Env, "GOARCH="+arch)
-	}
-	if cc != "" {
-		cmd.Env = append(cmd.Env, "CC="+cc)
-	}
-	for _, e := range os.Environ() {
-		if strings.HasPrefix(e, "GOPATH=") || strings.HasPrefix(e, "GOBIN=") {
-			continue
-		}
-		cmd.Env = append(cmd.Env, e)
-	}
-	return cmd
 }
 
 // Running The Tests
@@ -213,25 +213,51 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 // "tests" also includes static analysis tools such as vet.
 
 func doTest(cmdline []string) {
-	coverage := flag.Bool("coverage", false, "Whether to record code coverage")
+	var (
+		dlgo     = flag.Bool("dlgo", false, "Download Go and build with it")
+		arch     = flag.String("arch", "", "Run tests for given architecture")
+		cc       = flag.String("cc", "", "Sets C compiler binary")
+		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
+		verbose  = flag.Bool("v", false, "Whether to log verbosely")
+		race     = flag.Bool("race", false, "Execute the race detector")
+		timeout  = flag.String("timeout", "", "Timeout limit")
+	)
 	flag.CommandLine.Parse(cmdline)
-	env := build.Env()
+
+	// Configure the toolchain.
+	tc := build.GoToolchain{GOARCH: *arch, CC: *cc}
+	if *dlgo {
+		csdb := build.MustLoadChecksums("build/checksums.txt")
+		tc.Root = build.DownloadGo(csdb, dlgoVersion)
+	}
+	gotest := tc.Go("test")
+
+	// CI needs a bit more time for the statetests (default 10m).
+	gotest.Args = append(gotest.Args, "-timeout=20m")
+
+	// Enable CKZG backend in CI.
+	gotest.Args = append(gotest.Args, "-tags=ckzg")
+
+	// Test a single package at a time. CI builders are slow
+	// and some tests run into timeouts under load.
+	gotest.Args = append(gotest.Args, "-p", "1")
+	if *coverage {
+		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
+	}
+	if *verbose {
+		gotest.Args = append(gotest.Args, "-v")
+	}
+	if *race {
+		gotest.Args = append(gotest.Args, "-race")
+	}
+	if *timeout != "" {
+		gotest.Args = append(gotest.Args, "-timeout", *timeout)
+	}
 
 	packages := []string{"./..."}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	packages = build.ExpandPackagesNoVendor(packages)
-
-	// Run the actual tests.
-	// Test a single package at a time. CI builders are slow
-	// and some tests run into timeouts under load.
-	gotest := goTool("test", buildFlags(env)...)
-	gotest.Args = append(gotest.Args, "-p", "1", "-timeout", "5m")
-	if *coverage {
-		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
-	}
-
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
@@ -255,11 +281,9 @@ func doLint(cmdline []string) {
 
 // downloadLinter downloads and unpacks golangci-lint.
 func downloadLinter(cachedir string) string {
+	const version = "1.51.1"
+
 	csdb := build.MustLoadChecksums("build/checksums.txt")
-	version, err := build.Version(csdb, "golangci")
-	if err != nil {
-		log.Fatal(err)
-	}
 	arch := runtime.GOARCH
 	ext := ".tar.gz"
 
@@ -269,7 +293,6 @@ func downloadLinter(cachedir string) string {
 	if arch == "arm" {
 		arch += "v" + os.Getenv("GOARM")
 	}
-	
 	base := fmt.Sprintf("golangci-lint-%s-%s-%s", version, runtime.GOOS, arch)
 	url := fmt.Sprintf("https://github.com/golangci/golangci-lint/releases/download/v%s/%s%s", version, base, ext)
 	archivePath := filepath.Join(cachedir, base+ext)

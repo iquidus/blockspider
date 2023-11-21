@@ -4,23 +4,24 @@
 
 .PHONY: blockspiderd all test clean
 
-GOBIN = $(shell pwd)/build/bin
+GOBIN = ./build/bin
 GO ?= latest
+GORUN = go run
 
 blockspiderd:
-	build/env.sh go run build/ci.go install ./cmd/blockspiderd
+	$(GORUN) build/ci.go install ./cmd/blockspiderd
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/blockspiderd\" to launch the blockspider daemon."
 
 all:
-	build/env.sh go run build/ci.go install
+	$(GORUN) build/ci.go install
 
 test: all
-	build/env.sh go run build/ci.go test
+	$(GORUN) build/ci.go test
 
-lint: ## Run linters.
-	build/env.sh go run build/ci.go lint
+lint:
+	$(GORUN) build/ci.go lint
 
 clean:
-	./build/clean_go_build_cache.sh
+	go clean -cache
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*

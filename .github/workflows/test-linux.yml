@@ -42,12 +42,11 @@ jobs:
         with:
           submodules: false
 
-      - run: |
-          make test
+      - run: make test
 
   # Run build with latest Go version.
   make:
-    name: Run Tests
+    name: Make all
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.20
@@ -60,5 +59,4 @@ jobs:
         with:
           submodules: false
 
-      - run: |
-          make all
+      - run: make all
