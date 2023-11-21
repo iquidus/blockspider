@@ -12,36 +12,53 @@ on:
 jobs:
   # Run linter check. Only test code linters on latest version of Go.
   lint:
-    name: Lint
+    name: Run Linter
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.20
         id: go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.20
+          go-version: ^1.20
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
       - run: make lint
 
-  # Run build and tests against latest-1 Go version.
+  # Run tests against latest Go version.
   test:
-    name: Tests
+    name: Run Tests
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.20
         id: go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ^1.20
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - run: |
+          make test
+
+  # Run build with latest Go version.
+  make:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.20
+        id: go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ^1.20
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - run: |
           make all
-          make test
