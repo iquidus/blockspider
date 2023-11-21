@@ -1,0 +1,47 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Lint and Tests
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  # Run linter check. Only test code linters on latest version of Go.
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.20
+        id: go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.20
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: false
+
+      - run: make lint
+
+  # Run build and tests against latest-1 Go version.
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.20
+        id: go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.20
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - run: |
+          make all
+          make test
