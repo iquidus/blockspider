@@ -89,13 +89,8 @@ func (s *Synchronizer) AddLink(body func(*Task)) {
 func (s *Synchronizer) Finish() (aborted bool) {
 	s.quitChan <- 0
 	for {
-		select {
-		case _, more := <-s.nextChannel:
-			if more {
-				return false
-			}
-			return true
-		}
+		_, more := <-s.nextChannel
+		return !more
 	}
 }
 
@@ -138,11 +133,9 @@ func (s *Synchronizer) didAbort(t *Task) bool {
 func (s *Synchronizer) flushTasks() {
 loop:
 	for {
-		select {
-		case <-s.routines:
-			if len(s.routines) == 0 {
-				break loop
-			}
+		<-s.routines
+		if len(s.routines) == 0 {
+			break loop
 		}
 	}
 }

@@ -35,29 +35,27 @@ func startLogger(c chan *logObject, logger log.Logger) {
 		}
 	logLoop:
 		for {
-			select {
-			case lo, more := <-ch:
-				if more {
-					stats.add(lo)
-					if stats.blocks >= 1000 || time.Now().After(start.Add(time.Minute)) {
-						logger.Info("Imported new chain segment",
-							"blocks", stats.blocks,
-							"head", stats.blockNo,
-							"transactions", stats.txns,
-							"took", time.Since(start))
-						stats.clear()
-						start = time.Now()
-					}
-				} else {
-					if stats.blocks > 0 {
-						logger.Info("Imported new chain segment",
-							"blocks", stats.blocks,
-							"head", stats.blockNo,
-							"transactions", stats.txns,
-							"took", time.Since(start))
-					}
-					break logLoop
+			lo, more := <-ch
+			if more {
+				stats.add(lo)
+				if stats.blocks >= 1000 || time.Now().After(start.Add(time.Minute)) {
+					logger.Info("Imported new chain segment",
+						"blocks", stats.blocks,
+						"head", stats.blockNo,
+						"transactions", stats.txns,
+						"took", time.Since(start))
+					stats.clear()
+					start = time.Now()
 				}
+			} else {
+				if stats.blocks > 0 {
+					logger.Info("Imported new chain segment",
+						"blocks", stats.blocks,
+						"head", stats.blockNo,
+						"transactions", stats.txns,
+						"took", time.Since(start))
+				}
+				break logLoop
 			}
 		}
 	}(c)

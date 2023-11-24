@@ -42,10 +42,8 @@ func NewCrawler(cfg *Config, state *state.State, rpc *rpc.RPCClient, logger log.
 func runCrawler(ticker *time.Ticker, c Crawler) {
 	c.RunLoop()
 	for {
-		select {
-		case <-ticker.C:
-			c.RunLoop()
-		}
+		<-ticker.C
+		c.RunLoop()
 	}
 }
 

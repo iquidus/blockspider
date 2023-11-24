@@ -45,14 +45,12 @@ func (r *Task) run() {
 
 func (r *Task) receive() (closed bool) {
 	for {
-		select {
-		case _, more := <-r.hang:
-			if more {
-				return false
-			} else {
-				r.closeNext()
-				return true
-			}
+		_, more := <-r.hang
+		if more {
+			return false
+		} else {
+			r.closeNext()
+			return true
 		}
 	}
 }
