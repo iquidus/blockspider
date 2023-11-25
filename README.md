@@ -2,6 +2,8 @@
 
 An open source blockchain crawler and kafka producer.
 
+_Note: Although fully functional, blockspider is currently considered a WIP. Significant changes will occur before the first official release._
+
 ### Requires
 
 - go 1.20.x or greater
@@ -28,7 +30,7 @@ cp ./config.json.example ./config.json
 
 _Make required changes in config.json_
 
-```json
+```js
 {
   "chainId": 8, // chainId of target network
   "crawler": {
