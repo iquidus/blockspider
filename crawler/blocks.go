@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/syncronizer"
 	"github.com/iquidus/blockspider/util"
 )
@@ -176,20 +177,10 @@ func (c *Crawler) reorg() error {
 	return nil
 }
 
-type BlocksPayload struct {
-	Method string          `json:"method"`
-	Block  common.RawBlock `json:"block"`
-}
-
-type EventsPayload struct {
-	Method string         `json:"method"`
-	Events []common.TxLog `json:"events"`
-}
-
 func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
-	var bp = BlocksPayload{
+	var bp = kafka.BlocksPayload{
 		Method: "PUSH",
-		Block:  block,
+		Block:  block.Convert(),
 	}
 
 	payload, err := json.Marshal(bp)
@@ -207,9 +198,9 @@ func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
 }
 
 func (c *Crawler) sendReorgHooks(block common.RawBlock) error {
-	var bp = BlocksPayload{
+	var bp = kafka.BlocksPayload{
 		Method: "POP",
-		Block:  block,
+		Block:  block.Convert(),
 	}
 
 	payload, err := json.Marshal(bp)
@@ -226,7 +217,7 @@ func (c *Crawler) sendReorgHooks(block common.RawBlock) error {
 }
 
 func (c *Crawler) sendEventsMessage(events []common.TxLog, topic string) error {
-	var ep = EventsPayload{
+	var ep = kafka.EventsPayload{
 		Method: "PUSH",
 		Events: events,
 	}

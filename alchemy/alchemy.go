@@ -1,4 +1,9 @@
-package common
+package alchemy
+
+import (
+	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/util"
+)
 
 type AlchemyWebhookBlockLogs struct {
 	Data        string                    `bson:"data" json:"data"`
@@ -63,6 +68,17 @@ type AlchemyWebhook struct {
 	CreatedAt string       `bson:"createdAt" json:"createdAt"`
 	Type      string       `bson:"type" json:"type"`
 	Event     AlchemyEvent `bson:"event" json:"event"`
+}
+
+func (b *AlchemyWebhookBlock) Convert() common.Block {
+	baseFeePerGas := util.DecodeValueHex(b.BaseFeePerGas)
+	return common.Block{
+		Number:        b.Number,
+		Timestamp:     b.Timestamp,
+		Hash:          b.Hash,
+		ParentHash:    b.Parent.Hash,
+		BaseFeePerGas: baseFeePerGas,
+	}
 }
 
 /*
