@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -117,10 +118,10 @@ func sendBlockMessage(blockWriter *kafka.Writer, block common.Block) error {
 	return nil
 }
 
-func setupRouter(blockWriter *kafka.Writer) *gin.Engine {
+func setupRouter(blockWriter *kafka.Writer, cfg params.TransmuteConfig) *gin.Engine {
 	r := gin.Default()
 	r.ForwardedByClientIP = true
-	r.SetTrustedProxies([]string{"127.0.0.1"})
+	r.SetTrustedProxies(cfg.TrustedProxies)
 
 	// Define alchemy endpoint
 	r.GET("/alchemy", func(c *gin.Context) {
@@ -132,7 +133,7 @@ func setupRouter(blockWriter *kafka.Writer) *gin.Engine {
 		}
 
 		// validate signature
-		if !isValidSignatureForStringBody(body, signature, []byte("secret")) {
+		if !isValidSignatureForStringBody(body, signature, []byte(cfg.Alchemy.Secret)) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid signature"})
 			return
 		}
@@ -164,10 +165,10 @@ func setupRouter(blockWriter *kafka.Writer) *gin.Engine {
 func main() {
 	log.Info("blockspider/transmuted ", "version", params.VersionWithMeta)
 	readConfig(&cfg)
-	// create blockwriter
+	// Create blockwriter
 	bw := kafka.NewWriter(cfg.Crawler.Kafka.Blocks.Broker, &cfg.Crawler.Kafka.Blocks.Topic, 1)
-	// init gin router
-	r := setupRouter(bw)
-	// Listen and Server in 0.0.0.0:8080
-	r.Run(":8080")
+	// Init gin router
+	r := setupRouter(bw, cfg.Transmute)
+	// Listen and Server
+	r.Run(fmt.Sprintf(":%d", cfg.Transmute.Port))
 }

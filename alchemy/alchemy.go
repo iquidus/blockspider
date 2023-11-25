@@ -5,6 +5,10 @@ import (
 	"github.com/iquidus/blockspider/util"
 )
 
+type Config struct {
+	Secret string `json:"secret"` // alchemy webhook signing key
+}
+
 type AlchemyWebhookBlockLogs struct {
 	Data        string                    `bson:"data" json:"data"`
 	Topics      []string                  `bson:"topics" json:"topics"`
