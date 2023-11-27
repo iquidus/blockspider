@@ -1,16 +1,16 @@
 package params
 
 import (
-	"github.com/iquidus/blockspider/alchemy"
+	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/crawler"
 	"github.com/iquidus/blockspider/rpc"
 	"github.com/iquidus/blockspider/state"
 )
 
 type TransmuteConfig struct {
-	Port           uint64         `json:"port"`
-	TrustedProxies []string       `json:"trustedProxies"`
-	Alchemy        alchemy.Config `json:"alchemy"`
+	Port           uint64               `json:"port"`
+	TrustedProxies []string             `json:"trustedProxies"`
+	Alchemy        common.AlchemyConfig `json:"alchemy"`
 }
 
 type Config struct {

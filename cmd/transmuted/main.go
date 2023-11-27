@@ -15,7 +15,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
-	"github.com/iquidus/blockspider/alchemy"
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/params"
@@ -139,7 +138,7 @@ func setupRouter(blockWriter *kafka.Writer, cfg params.TransmuteConfig) *gin.Eng
 		}
 
 		// Parse JSON
-		event := new(alchemy.AlchemyEvent)
+		event := new(common.AlchemyEvent)
 		if err := json.Unmarshal(body, event); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

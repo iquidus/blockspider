@@ -5,10 +5,10 @@ import (
 )
 
 type RawBlock struct {
+	Hash             string           `bson:"hash" json:"hash"`
 	Number           string           `bson:"number" json:"number"`
 	Timestamp        string           `bson:"timestamp" json:"timestamp"`
 	Transactions     []RawTransaction `bson:"transactions" json:"transactions"`
-	Hash             string           `bson:"hash" json:"hash"`
 	ParentHash       string           `bson:"parentHash" json:"parentHash"`
 	Sha3Uncles       string           `bson:"sha3Uncles" json:"sha3Uncles"`
 	Miner            string           `bson:"miner" json:"miner"`

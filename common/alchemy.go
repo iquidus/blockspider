@@ -1,11 +1,10 @@
-package alchemy
+package common
 
 import (
-	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/util"
 )
 
-type Config struct {
+type AlchemyConfig struct {
 	Secret string `json:"secret"` // alchemy webhook signing key
 }
 
@@ -53,7 +52,9 @@ type AlchemyWebhookBlock struct {
 	GasLimit        uint64                    `bson:"gasLimit" json:"gasLimit"`
 	MixHash         string                    `bson:"mixHash" json:"mixHash"`
 	StateRoot       string                    `bson:"stateRoot" json:"stateRoot"`
+	Difficulty      string                    `bson:"difficulty" json:"difficulty"`
 	TotalDifficulty string                    `bson:"totalDifficulty" json:"totalDifficulty"`
+	Miner           string                    `bson:"miner" json:"miner"`
 	Logs            []AlchemyWebhookBlockLogs `bson:"logs" json:"logs"`
 }
 
@@ -74,14 +75,21 @@ type AlchemyWebhook struct {
 	Event     AlchemyEvent `bson:"event" json:"event"`
 }
 
-func (b *AlchemyWebhookBlock) Convert() common.Block {
+func (b *AlchemyWebhookBlock) Convert() Block {
 	baseFeePerGas := util.DecodeValueHex(b.BaseFeePerGas)
-	return common.Block{
-		Number:        b.Number,
-		Timestamp:     b.Timestamp,
-		Hash:          b.Hash,
-		ParentHash:    b.Parent.Hash,
-		BaseFeePerGas: baseFeePerGas,
+	return Block{
+		Number:          b.Number,
+		Timestamp:       b.Timestamp,
+		Hash:            b.Hash,
+		ParentHash:      b.Parent.Hash,
+		BaseFeePerGas:   baseFeePerGas,
+		GasUsed:         b.GasUsed,
+		GasLimit:        b.GasLimit,
+		MixHash:         b.MixHash,
+		StateRoot:       b.StateRoot,
+		TotalDifficulty: b.TotalDifficulty,
+		Miner:           b.Miner,
+		Difficulty:      b.Difficulty,
 	}
 }
 
