@@ -108,9 +108,9 @@ func (r *RPCClient) LatestBlockNumber() (uint64, error) {
 	return util.DecodeHex(bn), nil
 }
 
-func (r *RPCClient) GetLogs(address []string, hash string, topics []string) ([]common.TxLog, error) {
-	var logs []common.TxLog
-	err := r.client.Call(&logs, "eth_getLogs", &common.TxLogRequest{
+func (r *RPCClient) GetLogs(address []string, hash string, topics []string) ([]common.Log, error) {
+	var logs []common.Log
+	err := r.client.Call(&logs, "eth_getLogs", &common.LogRequest{
 		BlockHash: hash,
 		Address:   address,
 		Topics:    topics,
