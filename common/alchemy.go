@@ -16,6 +16,16 @@ type AlchemyWebhookBlockLogs struct {
 	Transaction AlchemyWebhookTransaction `bson:"transaction" json:"transaction"`
 }
 
+func (l *AlchemyWebhookBlockLogs) Convert() Log {
+	return Log{
+		Address:     l.Account.Address,
+		Topics:      l.Topics,
+		Data:        l.Data,
+		Index:       l.Index,
+		Transaction: l.Transaction.Convert(),
+	}
+}
+
 type AlchemyWebhookTransaction struct {
 	Hash                 string                 `bson:"hash" json:"hash"`
 	Nonce                uint64                 `bson:"nonce" json:"nonce"`
@@ -34,6 +44,26 @@ type AlchemyWebhookTransaction struct {
 	CreatedContract      *AlchemyWebhookAccount `bson:"createdContract" json:"createdContract"`
 }
 
+func (l *AlchemyWebhookTransaction) Convert() Transaction {
+	return Transaction{
+		Hash:                 l.Hash,
+		Nonce:                l.Nonce,
+		Index:                l.Index,
+		From:                 l.From.Address,
+		To:                   l.To.Address,
+		Value:                util.DecodeValueHex(l.Value),
+		GasPrice:             util.DecodeHex(l.GasPrice),
+		MaxFeePerGas:         util.DecodeHex(l.MaxFeePerGas),
+		MaxPriorityFeePerGas: util.DecodeHex(l.MaxPriorityFeePerGas),
+		Gas:                  l.Gas,
+		Status:               l.Status,
+		GasUsed:              l.GasUsed,
+		CumulativeGasUsed:    l.CumulativeGasUsed,
+		EffectiveGasPrice:    util.DecodeHex(l.EffectiveGasPrice),
+		CreatedContract:      l.CreatedContract.Address,
+	}
+}
+
 type AlchemyWebhookAccount struct {
 	Address string `bson:"address" json:"address"`
 }
@@ -43,19 +73,24 @@ type AlchemyWebhookParentBlock struct {
 }
 
 type AlchemyWebhookBlock struct {
-	Hash            string                    `bson:"hash" json:"hash"`
-	Number          uint64                    `bson:"number" json:"number"`
-	Timestamp       uint64                    `bson:"timestamp" json:"timestamp"`
-	Parent          AlchemyWebhookParentBlock `bson:"parent" json:"parent"`
-	BaseFeePerGas   string                    `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
-	GasUsed         uint64                    `bson:"gasUsed" json:"gasUsed"`
-	GasLimit        uint64                    `bson:"gasLimit" json:"gasLimit"`
-	MixHash         string                    `bson:"mixHash" json:"mixHash"`
-	StateRoot       string                    `bson:"stateRoot" json:"stateRoot"`
-	Difficulty      string                    `bson:"difficulty" json:"difficulty"`
-	TotalDifficulty string                    `bson:"totalDifficulty" json:"totalDifficulty"`
-	Miner           string                    `bson:"miner" json:"miner"`
-	Logs            []AlchemyWebhookBlockLogs `bson:"logs" json:"logs"`
+	Hash             string                      `bson:"hash" json:"hash"`
+	Number           uint64                      `bson:"number" json:"number"`
+	Timestamp        uint64                      `bson:"timestamp" json:"timestamp"`
+	Parent           AlchemyWebhookParentBlock   `bson:"parent" json:"parent"`
+	BaseFeePerGas    string                      `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
+	GasUsed          uint64                      `bson:"gasUsed" json:"gasUsed"`
+	GasLimit         uint64                      `bson:"gasLimit" json:"gasLimit"`
+	MixHash          string                      `bson:"mixHash" json:"mixHash"`
+	StateRoot        string                      `bson:"stateRoot" json:"stateRoot"`
+	Difficulty       string                      `bson:"difficulty" json:"difficulty"`
+	TotalDifficulty  string                      `bson:"totalDifficulty" json:"totalDifficulty"`
+	Nonce            string                      `bson:"nonce" json:"nonce"`
+	TransactionCount uint64                      `bson:"transactionCount" json:"transactionCount"`
+	TransactionsRoot string                      `bson:"transactionsRoot" json:"transactionsRoot"`
+	ReceiptsRoot     string                      `bson:"receiptsRoot" json:"receiptsRoot"`
+	LogsBloom        string                      `bson:"logsBloom" json:"logsBloom"`
+	Transactions     []AlchemyWebhookTransaction `bson:"transactions" json:"transactions"`
+	Logs             []AlchemyWebhookBlockLogs   `bson:"logs" json:"logs"`
 }
 
 type AlchemyEventData struct {
@@ -77,19 +112,33 @@ type AlchemyWebhook struct {
 
 func (b *AlchemyWebhookBlock) Convert() Block {
 	baseFeePerGas := util.DecodeValueHex(b.BaseFeePerGas)
+	// txns := make([]Transaction, len(b.Transactions))
+	// for i, txn := range b.Transactions {
+	// 	txns[i] = txn.Convert()
+	// }
+	logs := make([]Log, len(b.Logs))
+	for i, log := range b.Logs {
+		logs[i] = log.Convert()
+	}
 	return Block{
-		Number:          b.Number,
-		Timestamp:       b.Timestamp,
-		Hash:            b.Hash,
-		ParentHash:      b.Parent.Hash,
-		BaseFeePerGas:   baseFeePerGas,
-		GasUsed:         b.GasUsed,
-		GasLimit:        b.GasLimit,
-		MixHash:         b.MixHash,
-		StateRoot:       b.StateRoot,
-		TotalDifficulty: b.TotalDifficulty,
-		Miner:           b.Miner,
-		Difficulty:      b.Difficulty,
+		Hash:             b.Hash,
+		Number:           b.Number,
+		Timestamp:        b.Timestamp,
+		ParentHash:       b.Parent.Hash,
+		BaseFeePerGas:    baseFeePerGas,
+		GasUsed:          b.GasUsed,
+		GasLimit:         b.GasLimit,
+		MixHash:          b.MixHash,
+		StateRoot:        b.StateRoot,
+		Difficulty:       b.Difficulty,
+		TotalDifficulty:  b.TotalDifficulty,
+		Nonce:            b.Nonce,
+		TransactionCount: b.TransactionCount,
+		TransactionsRoot: b.TransactionsRoot,
+		ReceiptsRoot:     b.ReceiptsRoot,
+		LogsBloom:        b.LogsBloom,
+		// Transactions:     txns,
+		Logs: logs,
 	}
 }
 

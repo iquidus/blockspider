@@ -5,81 +5,81 @@ import (
 )
 
 type RawTransaction struct {
-	BlockHash        string `json:"blockHash"`
-	BlockNumber      string `json:"blockNumber"`
-	From             string `json:"from"`
-	Gas              string `json:"gas"`
-	GasPrice         string `json:"gasPrice"`
-	Hash             string `json:"hash"`
-	Input            string `json:"input"`
-	Nonce            string `json:"nonce"`
-	To               string `json:"to"`
-	TransactionIndex string `json:"transactionIndex"`
-	Value            string `json:"value"`
-	V                string `json:"v"`
-	R                string `json:"r"`
-	S                string `json:"s"`
-	Type             string `bson:"type" json:"type,omitempty"`
-	BaseFeePerGas    string `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
+	BlockHash            string `json:"blockHash"`
+	BlockNumber          string `json:"blockNumber"`
+	From                 string `json:"from"`
+	Gas                  string `json:"gas"`
+	GasPrice             string `json:"gasPrice"`
+	MaxFeePerGas         string `bson:"maxFeePerGas" json:"maxFeePerGas,omitempty"`
+	MaxPriorityFeePerGas string `bson:"maxPriorityFeePerGas" json:"maxPriorityFeePerGas,omitempty"`
+	Hash                 string `json:"hash"`
+	Input                string `json:"input"`
+	Nonce                string `json:"nonce"`
+	To                   string `json:"to"`
+	TransactionIndex     string `json:"transactionIndex"`
+	Value                string `json:"value"`
+	Type                 string `bson:"type" json:"type,omitempty"`
+	ChainId              string `json:"chainId"`
+	V                    string `json:"v"`
+	R                    string `json:"r"`
+	S                    string `json:"s"`
 }
 
-func (rt *RawTransaction) Convert() Transaction {
+type RawTransactionReceipt struct {
+	BlockHash         string   `bson:"blockHash" json:"blockHash"`
+	BlockNumber       string   `bson:"blockNumber" json:"blockNumber"`
+	ContractAddress   string   `bson:"contractAddress" json:"contractAddress"`
+	CumulativeGasUsed string   `bson:"cumulativeGasUsed" json:"cumulativeGasUsed"`
+	From              string   `bson:"from" json:"from"`
+	EffectiveGasPrice string   `bson:"effectiveGasPrice" json:"effectiveGasPrice"`
+	GasUsed           string   `bson:"gasUsed" json:"gasUsed"`
+	Logs              []RawLog `bson:"logs" json:"logs"`
+	LogsBloom         string   `bson:"logsBloom" json:"logsBloom"`
+	Status            string   `bson:"status" json:"status"`
+	To                string   `bson:"to" json:"to"`
+	TransactionHash   string   `bson:"transactionHash" json:"transactionHash"`
+	TransactionIndex  string   `bson:"transactionIndex" json:"transactionIndex"`
+	Type              string   `bson:"type" json:"type,omitempty"`
+}
+
+func (rt *RawTransaction) Convert(receipt RawTransactionReceipt) Transaction {
 	return Transaction{
-		BlockHash:        rt.BlockHash,
-		BlockNumber:      util.DecodeHex(rt.BlockNumber),
-		Hash:             rt.Hash,
-		Input:            rt.Input,
-		Value:            util.DecodeValueHex(rt.Value),
-		Gas:              util.DecodeHex(rt.Gas),
-		GasPrice:         util.DecodeHex(rt.GasPrice),
-		Nonce:            rt.Nonce,
-		TransactionIndex: util.DecodeHex(rt.TransactionIndex),
-		From:             rt.From,
-		To:               rt.To,
-		Type:             rt.Type,
-		BaseFeePerGas:    rt.BaseFeePerGas,
+		// from txn
+		From:                 rt.From,
+		Gas:                  util.DecodeHex(rt.Gas),
+		GasPrice:             util.DecodeHex(rt.GasPrice),
+		Hash:                 rt.Hash,
+		Index:                util.DecodeHex(rt.TransactionIndex),
+		MaxFeePerGas:         util.DecodeHex(rt.MaxFeePerGas),
+		MaxPriorityFeePerGas: util.DecodeHex(rt.MaxPriorityFeePerGas),
+		Nonce:                util.DecodeHex(rt.Nonce),
+		To:                   rt.To,
+		Value:                util.DecodeValueHex(rt.Value),
+		// from receipt
+		Status:            util.DecodeHex(receipt.Status),
+		GasUsed:           util.DecodeHex(receipt.GasUsed),
+		CumulativeGasUsed: util.DecodeHex(receipt.CumulativeGasUsed),
+		EffectiveGasPrice: util.DecodeHex(receipt.EffectiveGasPrice),
+		CreatedContract:   receipt.ContractAddress,
 	}
 }
 
 type Transaction struct {
-	BlockHash        string `bson:"blockHash" json:"blockHash"`
-	BlockNumber      uint64 `bson:"blockNumber" json:"blockNumber"`
-	Hash             string `bson:"hash" json:"hash"`
-	Timestamp        uint64 `bson:"timestamp" json:"timestamp"`
-	Input            string `bson:"input" json:"input"`
-	Value            string `bson:"value" json:"value"`
-	Gas              uint64 `bson:"gas" json:"gas"`
-	GasPrice         uint64 `bson:"gasPrice" json:"gasPrice"`
-	Nonce            string `bson:"nonce" json:"nonce"`
-	TransactionIndex uint64 `bson:"transactionIndex" json:"transactionIndex"`
-	From             string `bson:"from" json:"from"`
-	To               string `bson:"to" json:"to"`
-	Status           bool   `json:"status"`
-	//
-	GasUsed         uint64  `bson:"gasUsed" json:"gasUsed"`
-	ContractAddress string  `bson:"contractAddress" json:"contractAddress"`
-	Logs            []TxLog `bson:"logs" json:"logs"`
-	//
+	// from txn
+	From                 string `bson:"from" json:"from"`
+	Gas                  uint64 `bson:"gas" json:"gas"`
+	GasPrice             uint64 `bson:"gasPrice" json:"gasPrice"`
+	Hash                 string `bson:"hash" json:"hash"`
+	Index                uint64 `bson:"index" json:"index"`
 	MaxFeePerGas         uint64 `bson:"maxFeePerGas" json:"maxFeePerGas,omitempty"`
 	MaxPriorityFeePerGas uint64 `bson:"maxPriorityFeePerGas" json:"maxPriorityFeePerGas,omitempty"`
-	Type                 string `bson:"type" json:"type,omitempty"`
-	BaseFeePerGas        string `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
-}
-
-type TxLog struct {
-	Address          string   `bson:"address" json:"address"`
-	Topics           []string `bson:"topics" json:"topics"`
-	Data             string   `bson:"data" json:"data"`
-	BlockNumber      string   `bson:"blockNumber" json:"blockNumber"`
-	TransactionIndex string   `bson:"transactionIndex" json:"transactionIndex"`
-	TransactionHash  string   `bson:"transactionHash" json:"transactionHash"`
-	BlockHash        string   `bson:"blockHash" json:"blockHash"`
-	LogIndex         string   `bson:"logIndex" json:"logIndex"`
-	Removed          bool     `bson:"removed" json:"removed"`
-}
-
-type TxLogRequest struct {
-	Address   []string `bson:"address" json:"address"`
-	Topics    []string `bson:"topics" json:"topics"`
-	BlockHash string   `bson:"blockHash" json:"blockHash"`
+	Nonce                uint64 `bson:"nonce" json:"nonce"`
+	To                   string `bson:"to" json:"to"`
+	Value                string `bson:"value" json:"value"`
+	// from receipt
+	Status            uint64 `json:"status"`
+	GasUsed           uint64 `bson:"gasUsed" json:"gasUsed"`
+	CumulativeGasUsed uint64 `bson:"cumulativeGasUsed" json:"cumulativeGasUsed,omitempty"`
+	EffectiveGasPrice uint64 `bson:"effectiveGasPrice" json:"effectiveGasPrice,omitempty"`
+	CreatedContract   string `bson:"createdContract" json:"createdContract,omitempty"`
 }
