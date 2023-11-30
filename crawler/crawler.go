@@ -26,14 +26,14 @@ type Crawler struct {
 	cfg         *Config
 	logChan     chan *logObject
 	state       *state.State
-	cache       *cache.BlockStack[common.RawBlock]
+	cache       *cache.BlockStack[common.Block]
 	logger      log.Logger
 	blockWriter *kafka.Writer
 	eventWriter *kafka.Writer
 }
 
 func NewCrawler(cfg *Config, state *state.State, rpc *rpc.RPCClient, logger log.Logger) *Crawler {
-	bc := cache.New[common.RawBlock](&cfg.CacheLimit)
+	bc := cache.New[common.Block](&cfg.CacheLimit)
 	bw := kafka.NewWriter(cfg.Kafka.Blocks.Broker, &cfg.Kafka.Blocks.Topic, 1)
 	ew := kafka.NewWriter(cfg.Kafka.Blocks.Broker, nil, 1)
 	return &Crawler{rpc, cfg, make(chan *logObject), state, bc, logger, bw, ew}

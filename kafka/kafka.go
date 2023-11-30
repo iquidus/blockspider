@@ -25,6 +25,6 @@ type BlocksPayload struct {
 }
 
 type EventsPayload struct {
-	Method string         `json:"method"`
+	Method string       `json:"method"`
 	Events []common.Log `json:"events"`
 }

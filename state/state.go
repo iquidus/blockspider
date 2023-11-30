@@ -18,9 +18,9 @@ type State struct {
 }
 
 type StateData struct {
-	ChainId   *uint64         `json:"chainId"`
-	Head      common.RawBlock `json:"head"`
-	Timestamp int64           `json:"updated"`
+	ChainId   *uint64      `json:"chainId"`
+	Head      common.Block `json:"head"`
+	Timestamp int64        `json:"updated"`
 }
 
 type Config struct {
@@ -43,7 +43,7 @@ var Unmarshal = func(r io.Reader, v interface{}) error {
 }
 
 // create new state instance
-func Init(cfg *Config, chainId *uint64, startBlock common.RawBlock) (*State, error) {
+func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error) {
 	s := &State{
 		Syncing: false,
 		Config:  cfg,
@@ -80,7 +80,7 @@ func (s *State) Get() (*StateData, error) {
 	}
 }
 
-func (s *State) Update(block common.RawBlock) error {
+func (s *State) Update(block common.Block) error {
 	state.Head = block
 	state.Timestamp = time.Now().Unix()
 	return save(s.Config.Path)

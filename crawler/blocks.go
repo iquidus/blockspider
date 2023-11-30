@@ -9,7 +9,6 @@ import (
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/syncronizer"
-	"github.com/iquidus/blockspider/util"
 )
 
 func (c *Crawler) RunLoop() {
@@ -51,7 +50,7 @@ func (c *Crawler) crawlBlocks() {
 	c.logger.Debug("fetched block from node", "number", chainHead)
 
 	// set current block to head + 1
-	currentBlock := util.DecodeHex(state.Head.Number) + 1
+	currentBlock := state.Head.Number + 1
 
 	// create and start sync logger
 	syncLogger := c.logger.New()
@@ -67,13 +66,25 @@ func (c *Crawler) crawlBlocks() {
 		// add link to task chain
 		taskChain.AddLink(func(r *syncronizer.Task) {
 			// get remote block
-			block, err := c.rpc.GetBlockByHeight(b)
+			rawBlock, err := c.rpc.GetBlockByHeight(b)
 			if err != nil {
 				syncLogger.Error("failed getting block", "err", err)
 				c.state.Syncing = false
 				r.AbortSync()
 				return
 			}
+			// get remote block logs
+			logs, err := c.rpc.GetLogs(nil, rawBlock.Hash, nil)
+			if err != nil {
+				syncLogger.Error("failed getting logs", "err", err)
+				c.state.Syncing = false
+				r.AbortSync()
+				return
+			}
+
+			// convert remote block to common.Block
+			block := rawBlock.Convert(&logs)
+
 			// check if sync should abort
 			abort := r.Link()
 			if abort {
@@ -96,20 +107,28 @@ func (c *Crawler) crawlBlocks() {
 
 // validates local head against remote block with same height
 // returns the valid block, dropped block, isValid, error
-func (c *Crawler) validateBlock() (*common.RawBlock, *common.RawBlock, bool, error) {
-	// if theres no blocks in chain bail out
+func (c *Crawler) validateBlock() (*common.Block, *common.Block, bool, error) {
+	// if there's no blocks in chain bail out
 	if c.cache.Count() > 0 {
 		// remove local block from cache
 		local, _ := c.cache.Pop()
 		// fetch remote block from node
-		remote, err := c.rpc.GetBlockByHeight(local.Convert().Number)
+		rawRemote, err := c.rpc.GetBlockByHeight(local.Number)
 		if err != nil {
 			return nil, nil, false, err
 		}
 		// compares local and remote block hash
-		if local.Hash == remote.Hash {
+		if local.Hash == rawRemote.Hash {
 			return &local, nil, true, nil
 		} else {
+			// get all remote block logs
+			logs, err := c.rpc.GetLogs(nil, rawRemote.Hash, nil)
+			if err != nil {
+				return nil, nil, false, err
+			}
+
+			// convert remote block to common.Block
+			remote := rawRemote.Convert(&logs)
 			return &remote, &local, false, nil
 		}
 	} else {
@@ -118,10 +137,10 @@ func (c *Crawler) validateBlock() (*common.RawBlock, *common.RawBlock, bool, err
 }
 
 func (c *Crawler) reorg() error {
-	var commonAncestor *common.RawBlock
-	sidechainmap := make(map[string]common.RawBlock)
-	sidechain := []common.RawBlock{}
-	dropped := []common.RawBlock{}
+	var commonAncestor *common.Block
+	sidechainmap := make(map[uint64]common.Block)
+	sidechain := []common.Block{}
+	dropped := []common.Block{}
 
 	for {
 		// loop until common ancestor is found
@@ -151,13 +170,13 @@ func (c *Crawler) reorg() error {
 	}
 
 	// log common ancenstor
-	c.logger.Warn("Common ancestor found", "block", util.DecodeHex(commonAncestor.Number), "hash", commonAncestor.Hash)
-	// common ancestor was popped of the chain during above loop, push it back on
+	c.logger.Warn("Common ancestor found", "block", commonAncestor.Number, "hash", commonAncestor.Hash)
+	// common ancestor was popped off the chain during above loop, push it back on
 	c.cache.Push(*commonAncestor)
 
 	// process old blocks
 	for i := 0; i < len(dropped); i++ {
-		c.logger.Warn("Dropping local block", "number", util.DecodeHex(dropped[i].Number), "hash", dropped[i].Hash)
+		c.logger.Warn("Dropping local block", "number", dropped[i].Number, "hash", dropped[i].Hash)
 		err := c.sendReorgHooks(dropped[i])
 		if err != nil {
 			return errors.New("Failed to send reorg hook: " + err.Error())
@@ -167,7 +186,7 @@ func (c *Crawler) reorg() error {
 	// process new blocks
 	for i := len(sidechain) - 1; i >= 0; i-- {
 		c.cache.Push(sidechain[i])
-		c.logger.Info("Adding remote block", "number", util.DecodeHex(sidechain[i].Number), "hash", sidechain[i].Hash)
+		c.logger.Info("Adding remote block", "number", sidechain[i].Number, "hash", sidechain[i].Hash)
 		err := c.sendBlockMessage(dropped[i])
 		if err != nil {
 			return errors.New("Failed to send reorg hook: " + err.Error())
@@ -177,10 +196,10 @@ func (c *Crawler) reorg() error {
 	return nil
 }
 
-func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
+func (c *Crawler) sendBlockMessage(block common.Block) error {
 	var bp = kafka.BlocksPayload{
 		Method: "PUSH",
-		Block:  block.Convert(),
+		Block:  block,
 	}
 
 	payload, err := json.Marshal(bp)
@@ -197,10 +216,10 @@ func (c *Crawler) sendBlockMessage(block common.RawBlock) error {
 	return nil
 }
 
-func (c *Crawler) sendReorgHooks(block common.RawBlock) error {
+func (c *Crawler) sendReorgHooks(block common.Block) error {
 	var bp = kafka.BlocksPayload{
 		Method: "POP",
-		Block:  block.Convert(),
+		Block:  block,
 	}
 
 	payload, err := json.Marshal(bp)
@@ -216,7 +235,7 @@ func (c *Crawler) sendReorgHooks(block common.RawBlock) error {
 	return nil
 }
 
-func (c *Crawler) sendEventsMessage(events []common.TxLog, topic string) error {
+func (c *Crawler) sendEventsMessage(events []common.Log, topic string) error {
 	var ep = kafka.EventsPayload{
 		Method: "PUSH",
 		Events: events,
@@ -235,13 +254,13 @@ func (c *Crawler) sendEventsMessage(events []common.TxLog, topic string) error {
 	return nil
 }
 
-func (c *Crawler) syncBlock(block common.RawBlock, task *syncronizer.Task) {
+func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	// get parent block from cache
 	parent, err := c.cache.Peak()
 	if err == nil {
 		if parent.Hash != block.ParentHash {
 			// A reorg has occurred
-			c.logger.Warn("Chain reorg detected", "parent", util.DecodeHex(parent.Number), "hash", parent.Hash, "block", util.DecodeHex(block.Number), "hash", block.Hash, "parent", block.ParentHash)
+			c.logger.Warn("Chain reorg detected", "parent", parent.Number, "hash", parent.Hash, "block", block.Number, "hash", block.Hash, "parent", block.ParentHash)
 			err := c.reorg()
 			if err != nil {
 				c.logger.Error("Failed to determine common ancestor", "err", err)
@@ -299,8 +318,8 @@ func (c *Crawler) syncBlock(block common.RawBlock, task *syncronizer.Task) {
 	// add block to cache for next iteration
 	c.cache.Push(block)
 
-	// log TODO(iquidus): add a hooks counter
-	c.log(util.DecodeHex(block.Number), len(block.Transactions))
+	// log
+	c.log(block.Number, len(block.Logs))
 }
 
 func (c *Crawler) log(blockNo uint64, txns int) {

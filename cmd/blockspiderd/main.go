@@ -76,11 +76,21 @@ func main() {
 
 	mainLogger.Info("connected to rpc server", "version", version)
 
-	startBlock, err := rpcClient.GetBlockByHeight(cfg.Crawler.Start)
+	rawStartBlock, err := rpcClient.GetBlockByHeight(cfg.Crawler.Start)
 	if err != nil {
 		log.Error("could not retrieve start block", "err", err)
 		os.Exit(1)
 	}
+
+	// get all remote block logs
+	logs, err := rpcClient.GetLogs(nil, rawStartBlock.Hash, nil)
+	if err != nil {
+		log.Error("could not retrieve start block logs", "err", err)
+		os.Exit(1)
+	}
+
+	// convert raw block to common.Block
+	startBlock := rawStartBlock.Convert(&logs)
 
 	state, err := state.Init(&cfg.State, &cfg.ChainId, startBlock)
 	if err != nil {
