@@ -28,8 +28,26 @@ type RawBlock struct {
 	TransactionsRoot string           `bson:"transactionsRoot" json:"transactionsRoot"`
 }
 
-func (b *RawBlock) Convert(logs *[]Log) Block {
+func (b *RawBlock) Convert(rpcClient RPCClient) (Block, error) {
 	baseFeePerGas := util.DecodeValueHex(b.BaseFeePerGas)
+	// handle getting logs and txn receipts here
+	txns := make([]Transaction, len(b.Transactions))
+	var logs []Log
+	for i, txn := range b.Transactions {
+		// get transaction receipts
+		receipt, err := rpcClient.GetTransactionReceipt(b.Hash)
+		if err != nil {
+			return Block{}, err
+		}
+		// convert raw txn to txn
+		txns[i] = txn.Convert(*receipt)
+
+		// get logs
+		for _, log := range receipt.Logs {
+			logs[len(logs)] = log.Convert(txns[i])
+		}
+	}
+
 	return Block{
 		Number:    util.DecodeHex(b.Number),
 		Timestamp: util.DecodeHex(b.Timestamp),
@@ -52,8 +70,8 @@ func (b *RawBlock) Convert(logs *[]Log) Block {
 		LogsBloom:        b.LogsBloom,
 		ExtraData:        b.ExtraData,
 		Uncles:           b.Uncles,
-		Logs:             *logs,
-	}
+		Logs:             logs,
+	}, nil
 }
 
 type Block struct {

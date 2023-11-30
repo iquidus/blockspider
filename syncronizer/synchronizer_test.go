@@ -10,15 +10,15 @@ import (
 
 	models "github.com/iquidus/blockspider/common"
 
-	"github.com/iquidus/blockspider/rpc"
+	"github.com/iquidus/blockspider/common"
 
 	json "github.com/json-iterator/go"
 )
 
-var rpcClient *rpc.RPCClient
+var rpcClient *common.RPCClient
 
 func TestMain(m *testing.M) {
-	var c *rpc.Config
+	var c *common.RPCConfig
 
 	rpcCfg := []byte(`{
 		"type": "http",
@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 		log.Fatal("Error unmarshaling ", "err", err)
 	}
 
-	rpcClient = rpc.NewRPCClient(c)
+	rpcClient = common.NewRPCClient(c)
 
 	os.Exit(m.Run())
 }

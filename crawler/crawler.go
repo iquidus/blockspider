@@ -8,7 +8,6 @@ import (
 	"github.com/iquidus/blockspider/cache"
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/kafka"
-	"github.com/iquidus/blockspider/rpc"
 	"github.com/iquidus/blockspider/state"
 )
 
@@ -22,7 +21,7 @@ type Config struct {
 
 type Crawler struct {
 	// backend *storage.MongoDB
-	rpc         *rpc.RPCClient
+	rpc         *common.RPCClient
 	cfg         *Config
 	logChan     chan *logObject
 	state       *state.State
@@ -32,7 +31,7 @@ type Crawler struct {
 	eventWriter *kafka.Writer
 }
 
-func NewCrawler(cfg *Config, state *state.State, rpc *rpc.RPCClient, logger log.Logger) *Crawler {
+func NewCrawler(cfg *Config, state *state.State, rpc *common.RPCClient, logger log.Logger) *Crawler {
 	bc := cache.New[common.Block](&cfg.CacheLimit)
 	bw := kafka.NewWriter(cfg.Kafka.Blocks.Broker, &cfg.Kafka.Blocks.Topic, 1)
 	ew := kafka.NewWriter(cfg.Kafka.Blocks.Broker, nil, 1)

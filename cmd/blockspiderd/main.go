@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/params"
-	"github.com/iquidus/blockspider/rpc"
 	"github.com/iquidus/blockspider/state"
 )
 
@@ -62,7 +62,7 @@ func main() {
 
 	mainLogger.Debug("printing config", "cfg", cfg)
 
-	rpcClient := rpc.NewRPCClient(&cfg.Rpc)
+	rpcClient := common.NewRPCClient(&cfg.Rpc)
 	version, err := rpcClient.Ping()
 	if err != nil {
 		switch err.(type) {
@@ -82,15 +82,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// get all remote block logs
-	logs, err := rpcClient.GetLogs(nil, rawStartBlock.Hash, nil)
+	// convert raw block to common.Block
+	startBlock, err := rawStartBlock.Convert(*rpcClient)
 	if err != nil {
-		log.Error("could not retrieve start block logs", "err", err)
+		log.Error("could not convert start block", "err", err)
 		os.Exit(1)
 	}
-
-	// convert raw block to common.Block
-	startBlock := rawStartBlock.Convert(&logs)
 
 	state, err := state.Init(&cfg.State, &cfg.ChainId, startBlock)
 	if err != nil {

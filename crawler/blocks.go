@@ -73,17 +73,15 @@ func (c *Crawler) crawlBlocks() {
 				r.AbortSync()
 				return
 			}
-			// get remote block logs
-			logs, err := c.rpc.GetLogs(nil, rawBlock.Hash, nil)
+
+			// convert remote block to common.Block
+			block, err := rawBlock.Convert(*c.rpc)
 			if err != nil {
-				syncLogger.Error("failed getting logs", "err", err)
+				syncLogger.Error("failed converting block", "err", err)
 				c.state.Syncing = false
 				r.AbortSync()
 				return
 			}
-
-			// convert remote block to common.Block
-			block := rawBlock.Convert(&logs)
 
 			// check if sync should abort
 			abort := r.Link()
@@ -121,14 +119,11 @@ func (c *Crawler) validateBlock() (*common.Block, *common.Block, bool, error) {
 		if local.Hash == rawRemote.Hash {
 			return &local, nil, true, nil
 		} else {
-			// get all remote block logs
-			logs, err := c.rpc.GetLogs(nil, rawRemote.Hash, nil)
+			// convert remote block to common.Block
+			remote, err := rawRemote.Convert(*c.rpc)
 			if err != nil {
 				return nil, nil, false, err
 			}
-
-			// convert remote block to common.Block
-			remote := rawRemote.Convert(&logs)
 			return &remote, &local, false, nil
 		}
 	} else {
@@ -235,24 +230,24 @@ func (c *Crawler) sendReorgHooks(block common.Block) error {
 	return nil
 }
 
-func (c *Crawler) sendEventsMessage(events []common.Log, topic string) error {
-	var ep = kafka.EventsPayload{
-		Method: "PUSH",
-		Events: events,
-	}
+// func (c *Crawler) sendEventsMessage(events []common.Log, topic string) error {
+// 	var ep = kafka.EventsPayload{
+// 		Method: "PUSH",
+// 		Events: events,
+// 	}
 
-	payload, err := json.Marshal(ep)
-	if err != nil {
-		return err
-	}
+// 	payload, err := json.Marshal(ep)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = c.eventWriter.WriteMessagesWithTopic(context.Background(), payload, "events")
-	if err != nil {
-		return err
-	}
+// 	err = c.eventWriter.WriteMessagesWithTopic(context.Background(), payload, "events")
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	// get parent block from cache
@@ -292,21 +287,21 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	// 	              migrate to a single getlogs call (or derive from block itself), and filter locally
 
 	// handle getlogs requests
-	logopts := c.cfg.Kafka.Events
-	for i := 0; i < len(logopts); i++ {
-		logs, err := c.rpc.GetLogs(logopts[i].Addresses, block.Hash, logopts[i].Topics)
-		if err != nil {
-			c.logger.Error("Failed to get logs", "err", err)
-			return
-		}
-		if len(logs) > 0 {
-			// handle webhook here
-			err = c.sendEventsMessage(logs, logopts[i].Topic)
-			if err != nil {
-				c.logger.Error("Failed to send getlogs hook", "err", err)
-			}
-		}
-	}
+	// logopts := c.cfg.Kafka.Events
+	// for i := 0; i < len(logopts); i++ {
+	// 	logs, err := c.rpc.GetLogs(logopts[i].Addresses, block.Hash, logopts[i].Topics)
+	// 	if err != nil {
+	// 		c.logger.Error("Failed to get logs", "err", err)
+	// 		return
+	// 	}
+	// 	if len(logs) > 0 {
+	// 		// handle webhook here
+	// 		err = c.sendEventsMessage(logs, logopts[i].Topic)
+	// 		if err != nil {
+	// 			c.logger.Error("Failed to send getlogs hook", "err", err)
+	// 		}
+	// 	}
+	// }
 
 	// write block to state
 	err = c.state.Update(block)

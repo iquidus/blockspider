@@ -1,4 +1,4 @@
-package rpc
+package common
 
 import (
 	"context"
@@ -9,11 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	homedir "github.com/mitchellh/go-homedir"
 
-	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/util"
 )
 
-type Config struct {
+type RPCConfig struct {
 	Type     string `json:"type"`
 	Endpoint string `json:"endpoint"`
 }
@@ -23,7 +22,7 @@ type RPCClient struct {
 	eth    *ethclient.Client
 }
 
-func dialNewClient(cfg *Config) (*rpc.Client, error) {
+func dialNewClient(cfg *RPCConfig) (*rpc.Client, error) {
 	var (
 		client *rpc.Client
 		err    error
@@ -55,7 +54,7 @@ func dialNewClient(cfg *Config) (*rpc.Client, error) {
 	return client, nil
 }
 
-func NewRPCClient(cfg *Config) *RPCClient {
+func NewRPCClient(cfg *RPCConfig) *RPCClient {
 	client, err := dialNewClient(cfg)
 	if err != nil {
 		log.Error("could not dial rpc client", "err", err)
@@ -67,33 +66,33 @@ func NewRPCClient(cfg *Config) *RPCClient {
 	return rpcClient
 }
 
-func (r *RPCClient) getBlockBy(method string, params ...interface{}) (common.RawBlock, error) {
-	var reply common.RawBlock
+func (r *RPCClient) getBlockBy(method string, params ...interface{}) (RawBlock, error) {
+	var reply RawBlock
 
 	err := r.client.Call(&reply, method, params...)
 
 	if err != nil {
-		return common.RawBlock{}, err
+		return RawBlock{}, err
 	}
 
 	return reply, nil
 }
 
-func (r *RPCClient) GetLatestBlock() (common.RawBlock, error) {
+func (r *RPCClient) GetLatestBlock() (RawBlock, error) {
 	bn, err := r.LatestBlockNumber()
 
 	if err != nil {
-		return common.RawBlock{}, err
+		return RawBlock{}, err
 	}
 
 	return r.getBlockBy("eth_getBlockByNumber", util.EncodeUint64(bn))
 }
 
-func (r *RPCClient) GetBlockByHeight(height uint64) (common.RawBlock, error) {
+func (r *RPCClient) GetBlockByHeight(height uint64) (RawBlock, error) {
 	return r.getBlockBy("eth_getBlockByNumber", util.EncodeUint64(height), true)
 }
 
-func (r *RPCClient) GetBlockByHash(hash string) (common.RawBlock, error) {
+func (r *RPCClient) GetBlockByHash(hash string) (RawBlock, error) {
 	return r.getBlockBy("eth_getBlockByHash", hash, true)
 }
 
@@ -108,9 +107,9 @@ func (r *RPCClient) LatestBlockNumber() (uint64, error) {
 	return util.DecodeHex(bn), nil
 }
 
-func (r *RPCClient) GetLogs(address []string, hash string, topics []string) ([]common.Log, error) {
-	var logs []common.Log
-	err := r.client.Call(&logs, "eth_getLogs", &common.LogRequest{
+func (r *RPCClient) GetLogs(address []string, hash string, topics []string) ([]RawLog, error) {
+	var logs []RawLog
+	err := r.client.Call(&logs, "eth_getLogs", &LogRequest{
 		BlockHash: hash,
 		Address:   address,
 		Topics:    topics,
@@ -120,6 +119,16 @@ func (r *RPCClient) GetLogs(address []string, hash string, topics []string) ([]c
 	}
 
 	return logs, nil
+}
+
+func (r *RPCClient) GetTransactionReceipt(hash string) (*RawTransactionReceipt, error) {
+	var receipt RawTransactionReceipt
+	err := r.client.Call(&receipt, "eth_getTransactionReceipt", hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &receipt, nil
 }
 
 func (r *RPCClient) Ping() (string, error) {
