@@ -14,16 +14,18 @@ func NewWriter(broker string, topic *string, batchSize int) *Writer {
 	var writer kafka.Writer
 	if topic != nil {
 		writer = kafka.Writer{
-			Addr:      kafka.TCP(broker),
-			Topic:     *topic,
-			Balancer:  &kafka.LeastBytes{},
-			BatchSize: batchSize,
+			Addr:                   kafka.TCP(broker),
+			Topic:                  *topic,
+			Balancer:               &kafka.LeastBytes{},
+			BatchSize:              batchSize,
+			AllowAutoTopicCreation: true,
 		}
 	} else {
 		writer = kafka.Writer{
-			Addr:      kafka.TCP(broker),
-			Balancer:  &kafka.LeastBytes{},
-			BatchSize: batchSize,
+			Addr:                   kafka.TCP(broker),
+			Balancer:               &kafka.LeastBytes{},
+			BatchSize:              batchSize,
+			AllowAutoTopicCreation: true,
 		}
 	}
 
