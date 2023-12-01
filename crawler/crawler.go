@@ -21,21 +21,21 @@ type Config struct {
 
 type Crawler struct {
 	// backend *storage.MongoDB
-	rpc         *common.RPCClient
-	cfg         *Config
-	logChan     chan *logObject
-	state       *state.State
-	cache       *cache.BlockStack[common.Block]
-	logger      log.Logger
-	blockWriter *kafka.Writer
-	eventWriter *kafka.Writer
+	rpc     *common.RPCClient
+	cfg     *Config
+	logChan chan *logObject
+	state   *state.State
+	cache   *cache.BlockStack[common.Block]
+	logger  log.Logger
+	writer  *kafka.Writer
 }
 
 func NewCrawler(cfg *Config, state *state.State, rpc *common.RPCClient, logger log.Logger) *Crawler {
 	bc := cache.New[common.Block](&cfg.CacheLimit)
-	bw := kafka.NewWriter(cfg.Kafka.Blocks.Broker, &cfg.Kafka.Blocks.Topic, 1)
-	ew := kafka.NewWriter(cfg.Kafka.Blocks.Broker, nil, 1)
-	return &Crawler{rpc, cfg, make(chan *logObject), state, bc, logger, bw, ew}
+	// create kafka writer
+	kw := kafka.NewWriter(cfg.Kafka.Broker, nil, 1)
+
+	return &Crawler{rpc, cfg, make(chan *logObject), state, bc, logger, kw}
 }
 
 func runCrawler(ticker *time.Ticker, c Crawler) {

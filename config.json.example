@@ -6,18 +6,14 @@
     "routines": 1,
     "cache": 128,
     "kafka": {
-      "events": [
+      "broker": "localhost:9092",
+      "params": [
         {
-          "broker": "localhost:9092",
-          "topic": "events",
+          "topic": "ubiq-all",
           "addresses": [],
           "topics": []
         }
-      ],
-      "blocks": {
-        "broker": "localhost:9092",
-        "topic": "blocks"
-      }
+      ]
     }
   },
   "rpc": {
@@ -26,5 +22,12 @@
   },
   "state": {
     "path": "/Users/iquidus/blockspider/ubiq.json"
+  },
+  "transmute": {
+    "port": 8080,
+    "trustedProxies": ["127.0.0.1"],
+    "alchemy": {
+      "secret": "secret"
+    }
   }
 }

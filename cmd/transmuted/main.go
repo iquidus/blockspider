@@ -98,9 +98,10 @@ func isValidSignatureForStringBody(body []byte, signature string, signingKey []b
 }
 
 func sendBlockMessage(blockWriter *kafka.Writer, block common.Block) error {
-	var bp = kafka.BlocksPayload{
-		Method: "PUSH",
-		Block:  block,
+	var bp = kafka.Payload{
+		Status:  "ACCEPTED",
+		Block:   block,
+		Version: 1,
 	}
 
 	payload, err := json.Marshal(bp)
@@ -165,9 +166,9 @@ func main() {
 	log.Info("blockspider/transmuted ", "version", params.VersionWithMeta)
 	readConfig(&cfg)
 	// Create blockwriter
-	bw := kafka.NewWriter(cfg.Crawler.Kafka.Blocks.Broker, &cfg.Crawler.Kafka.Blocks.Topic, 1)
+	kw := kafka.NewWriter(cfg.Crawler.Kafka.Broker, nil, 1)
 	// Init gin router
-	r := setupRouter(bw, cfg.Transmute)
+	r := setupRouter(kw, cfg.Transmute)
 	// Listen and Server
 	r.Run(fmt.Sprintf(":%d", cfg.Transmute.Port))
 }

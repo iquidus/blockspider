@@ -191,63 +191,88 @@ func (c *Crawler) reorg() error {
 	return nil
 }
 
+func includes(addresses []string, a string) bool {
+	for _, addr := range addresses {
+		if addr == a {
+			return true
+		}
+	}
+
+	return false
+}
+
+// filterLogs creates a slice of logs matching the given criteria.
+func filterLogs(logs []common.Log, addresses []string, topics []string) []common.Log {
+	var ret []common.Log
+Logs:
+	for _, log := range logs {
+		if len(addresses) > 0 && !includes(addresses, log.Address) {
+			continue
+		}
+		// If the to filtered topics is greater than the amount of topics in logs, skip.
+		if len(topics) > len(log.Topics) {
+			continue Logs
+		}
+		for i, sub := range topics {
+			match := len(sub) == 0 // empty rule set == wildcard
+			for _, topic := range sub {
+				if log.Topics[i] == string(topic) {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue Logs
+			}
+		}
+		ret = append(ret, log)
+	}
+	return ret
+}
+
 func (c *Crawler) sendBlockMessage(block common.Block) error {
-	var bp = kafka.BlocksPayload{
-		Method: "PUSH",
-		Block:  block,
+	for _, ktopic := range c.cfg.Kafka.Params {
+		nb := block
+		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
+		nb.Logs = filteredLogs
+		var bp = kafka.Payload{
+			Status:  "ACCEPTED",
+			Block:   nb,
+			Version: 1,
+		}
+		payload, err := json.Marshal(bp)
+		if err != nil {
+			return err
+		}
+		err = c.writer.WriteMessagesWithTopic(context.Background(), payload, ktopic.Topic)
+		if err != nil {
+			return err
+		}
 	}
-
-	payload, err := json.Marshal(bp)
-	if err != nil {
-		return err
-	}
-
-	err = c.blockWriter.WriteMessages(context.Background(), payload)
-
-	if err != nil {
-		c.logger.Error("failed to write messages", "err", err)
-	}
-
 	return nil
 }
 
 func (c *Crawler) sendReorgHooks(block common.Block) error {
-	var bp = kafka.BlocksPayload{
-		Method: "POP",
-		Block:  block,
+	for _, ktopic := range c.cfg.Kafka.Params {
+		nb := block
+		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
+		nb.Logs = filteredLogs
+		var bp = kafka.Payload{
+			Status:  "DROPPED",
+			Block:   nb,
+			Version: 1,
+		}
+		payload, err := json.Marshal(bp)
+		if err != nil {
+			return err
+		}
+		err = c.writer.WriteMessagesWithTopic(context.Background(), payload, ktopic.Topic)
+		if err != nil {
+			return err
+		}
 	}
-
-	payload, err := json.Marshal(bp)
-	if err != nil {
-		return err
-	}
-
-	err = c.blockWriter.WriteMessages(context.Background(), payload)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
-
-// func (c *Crawler) sendEventsMessage(events []common.Log, topic string) error {
-// 	var ep = kafka.EventsPayload{
-// 		Method: "PUSH",
-// 		Events: events,
-// 	}
-
-// 	payload, err := json.Marshal(ep)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = c.eventWriter.WriteMessagesWithTopic(context.Background(), payload, "events")
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	// get parent block from cache
