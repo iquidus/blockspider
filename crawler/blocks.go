@@ -182,7 +182,7 @@ func (c *Crawler) reorg() error {
 	for i := len(sidechain) - 1; i >= 0; i-- {
 		c.cache.Push(sidechain[i])
 		c.logger.Info("Adding remote block", "number", sidechain[i].Number, "hash", sidechain[i].Hash)
-		err := c.sendBlockMessage(dropped[i])
+		err := c.sendBlockMessage(&dropped[i])
 		if err != nil {
 			return errors.New("Failed to send reorg hook: " + err.Error())
 		}
@@ -230,14 +230,14 @@ Logs:
 	return ret
 }
 
-func (c *Crawler) sendBlockMessage(block common.Block) error {
+func (c *Crawler) sendBlockMessage(block *common.Block) error {
 	for _, ktopic := range c.cfg.Kafka.Params {
-		nb := block
-		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
-		nb.Logs = filteredLogs
+		// nb := block
+		// filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
+		// nb.Logs = filteredLogs
 		var bp = kafka.Payload{
 			Status:  "ACCEPTED",
-			Block:   nb,
+			Block:   *block,
 			Version: 1,
 		}
 		payload, err := json.Marshal(bp)
@@ -303,30 +303,10 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	}
 
 	// handle block hook here
-	err = c.sendBlockMessage(block)
+	err = c.sendBlockMessage(&block)
 	if err != nil {
 		c.logger.Error("Failed to send block hook", "err", err)
 	}
-
-	// TODO(iquidus): Running a getlogs with each filter is expensive
-	// 	              migrate to a single getlogs call (or derive from block itself), and filter locally
-
-	// handle getlogs requests
-	// logopts := c.cfg.Kafka.Events
-	// for i := 0; i < len(logopts); i++ {
-	// 	logs, err := c.rpc.GetLogs(logopts[i].Addresses, block.Hash, logopts[i].Topics)
-	// 	if err != nil {
-	// 		c.logger.Error("Failed to get logs", "err", err)
-	// 		return
-	// 	}
-	// 	if len(logs) > 0 {
-	// 		// handle webhook here
-	// 		err = c.sendEventsMessage(logs, logopts[i].Topic)
-	// 		if err != nil {
-	// 			c.logger.Error("Failed to send getlogs hook", "err", err)
-	// 		}
-	// 	}
-	// }
 
 	// write block to state
 	err = c.state.Update(block)

@@ -35,7 +35,7 @@ func (b *RawBlock) Convert(rpcClient RPCClient) (Block, error) {
 	var logs []Log
 	for i, txn := range b.Transactions {
 		// get transaction receipts
-		receipt, err := rpcClient.GetTransactionReceipt(b.Hash)
+		receipt, err := rpcClient.GetTransactionReceipt(txn.Hash)
 		if err != nil {
 			return Block{}, err
 		}
@@ -44,14 +44,14 @@ func (b *RawBlock) Convert(rpcClient RPCClient) (Block, error) {
 
 		// get logs
 		for _, log := range receipt.Logs {
-			logs[len(logs)] = log.Convert(txns[i])
+			logs = append(logs, log.Convert(txns[i]))
 		}
 	}
 
 	return Block{
-		Number:    util.DecodeHex(b.Number),
-		Timestamp: util.DecodeHex(b.Timestamp),
-		// Transactions:    txns,
+		Number:           util.DecodeHex(b.Number),
+		Timestamp:        util.DecodeHex(b.Timestamp),
+		Transactions:     txns,
 		Hash:             b.Hash,
 		ParentHash:       b.ParentHash,
 		BaseFeePerGas:    baseFeePerGas,
@@ -75,28 +75,28 @@ func (b *RawBlock) Convert(rpcClient RPCClient) (Block, error) {
 }
 
 type Block struct {
-	Number     uint64 `bson:"number" json:"number"`
-	Timestamp  uint64 `bson:"timestamp" json:"timestamp"`
-	Hash       string `bson:"hash" json:"hash"`
-	ParentHash string `bson:"parentHash" json:"parentHash"`
-	// Transactions    []Transaction    `bson:"transactions" json:"transactions,omitempty"`
-	BaseFeePerGas    string   `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
-	GasUsed          uint64   `bson:"gasUsed" json:"gasUsed,omitempty"`
-	GasLimit         uint64   `bson:"gasLimit" json:"gasLimit,omitempty"`
-	MixHash          string   `bson:"mixHash" json:"mixHash,omitempty"`
-	StateRoot        string   `bson:"stateRoot" json:"stateRoot,omitempty"`
-	TotalDifficulty  string   `bson:"totalDifficulty" json:"totalDifficulty,omitempty"`
-	Sha3Uncles       string   `bson:"sha3Uncles" json:"sha3Uncles,omitempty"`
-	Miner            string   `bson:"miner" json:"miner,omitempty"`
-	Difficulty       string   `bson:"difficulty" json:"difficulty,omitempty"`
-	Nonce            string   `bson:"nonce" json:"nonce,omitempty"`
-	TransactionCount uint64   `bson:"transactionCount" json:"transactionCount,omitempty"`
-	TransactionsRoot string   `bson:"transactionsRoot" json:"transactionsRoot,omitempty"`
-	ReceiptsRoot     string   `bson:"receiptsRoot" json:"receiptsRoot,omitempty"`
-	LogsBloom        string   `bson:"logsBloom" json:"logsBloom,omitempty"`
-	ExtraData        string   `bson:"extraData" json:"extraData,omitempty"`
-	Uncles           []string `bson:"uncles" json:"uncles,omitempty"`
-	Logs             []Log    `bson:"logs" json:"logs,omitempty"`
+	Number           uint64        `bson:"number" json:"number"`
+	Timestamp        uint64        `bson:"timestamp" json:"timestamp"`
+	Hash             string        `bson:"hash" json:"hash"`
+	ParentHash       string        `bson:"parentHash" json:"parentHash"`
+	Transactions     []Transaction `bson:"transactions" json:"transactions,omitempty"`
+	BaseFeePerGas    string        `bson:"baseFeePerGas" json:"baseFeePerGas,omitempty"`
+	GasUsed          uint64        `bson:"gasUsed" json:"gasUsed,omitempty"`
+	GasLimit         uint64        `bson:"gasLimit" json:"gasLimit,omitempty"`
+	MixHash          string        `bson:"mixHash" json:"mixHash,omitempty"`
+	StateRoot        string        `bson:"stateRoot" json:"stateRoot,omitempty"`
+	TotalDifficulty  string        `bson:"totalDifficulty" json:"totalDifficulty,omitempty"`
+	Sha3Uncles       string        `bson:"sha3Uncles" json:"sha3Uncles,omitempty"`
+	Miner            string        `bson:"miner" json:"miner,omitempty"`
+	Difficulty       string        `bson:"difficulty" json:"difficulty,omitempty"`
+	Nonce            string        `bson:"nonce" json:"nonce,omitempty"`
+	TransactionCount uint64        `bson:"transactionCount" json:"transactionCount,omitempty"`
+	TransactionsRoot string        `bson:"transactionsRoot" json:"transactionsRoot,omitempty"`
+	ReceiptsRoot     string        `bson:"receiptsRoot" json:"receiptsRoot,omitempty"`
+	LogsBloom        string        `bson:"logsBloom" json:"logsBloom,omitempty"`
+	ExtraData        string        `bson:"extraData" json:"extraData,omitempty"`
+	Uncles           []string      `bson:"uncles" json:"uncles,omitempty"`
+	Logs             []Log         `bson:"logs" json:"logs,omitempty"`
 }
 
 // TODO(iquidus): write a compact function for Block
