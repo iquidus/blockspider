@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/iquidus/blockspider/kafka"
@@ -15,7 +16,11 @@ func handleMessages(ctx context.Context, messages chan gkafka.Message, commits c
 		case <-ctx.Done():
 			return ctx.Err()
 		case message := <-messages:
-			log.Printf("message fetched and sent to channel: %v \n", string(message.Value))
+			var payload kafka.Payload
+			json.Unmarshal(message.Value, &payload)
+			if payload.Block.Logs != nil && len(payload.Block.Logs) > 0 {
+				log.Printf("message fetched and sent to channel: %v \n", string(message.Value))
+			}
 			select {
 			case <-ctx.Done():
 			case commits <- message:
@@ -26,8 +31,8 @@ func handleMessages(ctx context.Context, messages chan gkafka.Message, commits c
 
 func main() {
 	const (
-		topic    = "blocks"
-		groupId  = "example2"
+		topic    = "ubiq-all"
+		groupId  = "explorer"
 		chanSize = 1000
 	)
 

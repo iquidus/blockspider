@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -9,11 +8,11 @@ import (
 	"path/filepath"
 
 	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/disk"
 	"github.com/iquidus/blockspider/params"
 )
 
 var (
-	cfg            params.Config
 	configFileName string
 
 	height uint64
@@ -48,11 +47,7 @@ func generateReceipts(rpc *common.RPCClient) {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
 	// write raw block to file
-	towrite, err := json.MarshalIndent(rawBlock, "", "  ")
-	if err != nil {
-		log.Fatal("Error marshalling block: ", err)
-	}
-	err = os.WriteFile(fmt.Sprintf("./testdata/eth-block-%d.json", height), towrite, 0644)
+	err = disk.WriteJsonFile[common.RawBlock](rawBlock, fmt.Sprintf("./testdata/eth-block-%d.json", height), 0644)
 	if err != nil {
 		log.Fatal("Error writing to file: ", err)
 	}
@@ -66,45 +61,24 @@ func generateReceipts(rpc *common.RPCClient) {
 		receipts[i] = *receipt
 	}
 	// write receipts to file
-	towrite, err = json.MarshalIndent(receipts, "", "  ")
-	if err != nil {
-		log.Fatal("Error marshalling receipts: ", err)
-	}
-	err = os.WriteFile(fmt.Sprintf("./testdata/eth-txn-receipts-%d.json", height), towrite, 0644)
+	err = disk.WriteJsonFile[[]common.RawTransactionReceipt](receipts, fmt.Sprintf("./testdata/eth-txn-receipts-%d.json", height), 0644)
 	if err != nil {
 		log.Fatal("Error writing to file: ", err)
 	}
 }
 
-func readConfig(cfg *params.Config) {
-	if configFileName == "" {
-		mainLogger.Fatal("Invalid arguments", os.Args)
-		os.Exit(1)
-	}
-
-	confPath, err := filepath.Abs(configFileName)
+func main() {
+	mainLogger.Print("blockspider/gettestdata ", params.VersionWithMeta)
+	// Read config
+	var cfg params.Config
+	configPath, err := filepath.Abs(configFileName)
 	if err != nil {
 		mainLogger.Fatal("Error: could not parse config filepath", "err", err)
 	}
-
-	mainLogger.Print("Loading config", "path", confPath)
-
-	configFile, err := os.Open(confPath)
+	err = disk.ReadJsonFile[params.Config](configPath, &cfg)
 	if err != nil {
-		mainLogger.Fatal("File error", "err", err.Error())
+		mainLogger.Fatal("Error: could read config file", "err", err)
 	}
-
-	defer configFile.Close()
-
-	jsonParser := json.NewDecoder(configFile)
-	if err := jsonParser.Decode(&cfg); err != nil {
-		mainLogger.Fatal("Config error", "err", err.Error())
-	}
-}
-
-func main() {
-	mainLogger.Print("blockspider/gettestdata ", params.VersionWithMeta)
-	readConfig(&cfg)
 	rpcClient := common.NewRPCClient(&cfg.Rpc)
 	generateReceipts(rpcClient)
 }

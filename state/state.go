@@ -1,15 +1,12 @@
 package state
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"io"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/disk"
 )
 
 type State struct {
@@ -29,18 +26,6 @@ type Config struct {
 
 var state *StateData = nil
 var lock sync.Mutex
-
-var Marshal = func(v interface{}) (io.Reader, error) {
-	b, err := json.MarshalIndent(v, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewReader(b), nil
-}
-
-var Unmarshal = func(r io.Reader, v interface{}) error {
-	return json.NewDecoder(r).Decode(v)
-}
 
 // create new state instance
 func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error) {
@@ -89,26 +74,19 @@ func (s *State) Update(block common.Block) error {
 func load(path string) error {
 	lock.Lock()
 	defer lock.Unlock()
-	f, err := os.Open(path)
+	err := disk.ReadJsonFile[StateData](path, state)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return Unmarshal(f, &state)
+	return nil
 }
 
 func save(path string) error {
 	lock.Lock()
 	defer lock.Unlock()
-	f, err := os.Create(path)
+	err := disk.WriteJsonFile[StateData](*state, path, 0644)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	r, err := Marshal(state)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(f, r)
-	return err
+	return nil
 }

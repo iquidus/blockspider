@@ -16,12 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
 	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/disk"
 	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/params"
 )
 
 var (
-	cfg        params.Config
 	appLogger  = log.Root()
 	mainLogger log.Logger
 
@@ -61,32 +61,6 @@ func init() {
 	appLogger.SetHandler(RootHandler)
 
 	mainLogger = log.Root().New()
-}
-
-func readConfig(cfg *params.Config) {
-	if configFileName == "" {
-		mainLogger.Error("Invalid arguments", os.Args)
-		os.Exit(1)
-	}
-
-	confPath, err := filepath.Abs(configFileName)
-	if err != nil {
-		mainLogger.Error("Error: could not parse config filepath", "err", err)
-	}
-
-	mainLogger.Info("Loading config", "path", confPath)
-
-	configFile, err := os.Open(confPath)
-	if err != nil {
-		appLogger.Error("File error", "err", err.Error())
-	}
-
-	defer configFile.Close()
-
-	jsonParser := json.NewDecoder(configFile)
-	if err := jsonParser.Decode(&cfg); err != nil {
-		mainLogger.Error("Config error", "err", err.Error())
-	}
 }
 
 // https://docs.alchemy.com/reference/custom-webhooks-faq
@@ -164,7 +138,16 @@ func setupRouter(blockWriter *kafka.Writer, cfg params.TransmuteConfig) *gin.Eng
 
 func main() {
 	log.Info("blockspider/transmuted ", "version", params.VersionWithMeta)
-	readConfig(&cfg)
+	// Read config
+	var cfg params.Config
+	configPath, err := filepath.Abs(configFileName)
+	if err != nil {
+		mainLogger.Error("Error: could not parse config filepath", "err", err)
+	}
+	err = disk.ReadJsonFile[params.Config](configPath, &cfg)
+	if err != nil {
+		log.Error("Error: could read config file", "err", err)
+	}
 	// Create blockwriter
 	kw := kafka.NewWriter(cfg.Crawler.Kafka.Broker, nil, 1)
 	// Init gin router

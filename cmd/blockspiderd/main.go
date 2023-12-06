@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/iquidus/blockspider/common"
+	"github.com/iquidus/blockspider/disk"
 	"github.com/iquidus/blockspider/params"
 	"github.com/iquidus/blockspider/state"
 )
 
 var (
-	cfg        params.Config
 	appLogger  = log.Root()
 	mainLogger log.Logger
 
@@ -58,7 +59,18 @@ func init() {
 func main() {
 	log.Info(fmt.Sprint("blockspider ", params.VersionWithMeta))
 
-	readConfig(&cfg)
+	// Read config
+	var cfg params.Config
+	configPath, err := filepath.Abs(configFileName)
+	if err != nil {
+		log.Error("Error: could not parse config filepath", "err", err)
+		os.Exit(1)
+	}
+	err = disk.ReadJsonFile[params.Config](configPath, &cfg)
+	if err != nil {
+		log.Error("Error: could read config file", "err", err)
+		os.Exit(1)
+	}
 
 	mainLogger.Debug("printing config", "cfg", cfg)
 
