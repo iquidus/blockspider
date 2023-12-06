@@ -38,6 +38,11 @@ func TestPush(t *testing.T) {
 	if got != item {
 		t.Errorf("TestPush item = %d; want %d;", got, item)
 	}
+
+	got = bc.items[0]
+	if got != item {
+		t.Errorf("TestPush items[0] = %d; want %d;", got, item)
+	}
 }
 
 func TestPop(t *testing.T) {
@@ -60,6 +65,10 @@ func TestPop(t *testing.T) {
 	// count is 0 if last item popped
 	if bc.count != 0 {
 		t.Errorf("TestPop count = %d; want 0;", bc.count)
+	}
+	// items is empty if last item popped
+	if len(bc.items) != 0 {
+		t.Errorf("TestPop items = %d; want 0;", len(bc.items))
 	}
 	// with empty stack
 	_, err = bc.Pop()
@@ -98,6 +107,10 @@ func TestCount(t *testing.T) {
 	if got != want {
 		t.Errorf("TestCount count = %d; want %d;", got, want)
 	}
+	// count matches items length
+	if got != len(bc.items) {
+		t.Errorf("TestCount count = %d; want %d;", got, len(bc.items))
+	}
 }
 
 func TestString(t *testing.T) {
@@ -125,8 +138,14 @@ func TestLimit(t *testing.T) {
 	if bc.head.item != 20 {
 		t.Errorf("TestLimit head = %d; want 20;", bc.head.item)
 	}
+	if bc.items[0] != 20 {
+		t.Errorf("TestLimit items[0] = %d; want 20;", bc.items[0])
+	}
 	// check tail
 	if bc.tail.item != 11 {
 		t.Errorf("TestLimit tail = %d; want 11;", bc.tail.item)
+	}
+	if bc.items[len(bc.items)-1] != 11 {
+		t.Errorf("TestLimit items[len(items)-1] = %d; want 11;", bc.items[len(bc.items)-1])
 	}
 }

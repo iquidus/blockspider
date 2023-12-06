@@ -54,25 +54,12 @@ func (s *BlockStack[E]) Count() int {
 	return s.count
 }
 
-// Flattens items into a slice with head at index 0
-// WARNING: O(n) only use for debugging
-func (s *BlockStack[E]) items() []E {
-	var items []E
-	if s.head != nil {
-		var head *node[E] = s.head
-		for {
-			items = append(items, head.item)
-			if head.next != nil {
-				head = head.next
-			} else {
-				break
-			}
-		}
-	}
-	return items
+// Return items as a slice with head at index 0
+func (s *BlockStack[E]) Items() []E {
+	return s.items
 }
 
 // String function for fmt print etc.
 func (s *BlockStack[E]) String() string {
-	return fmt.Sprintf("%v", s.items())
+	return fmt.Sprintf("%v", s.Items())
 }

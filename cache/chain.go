@@ -13,6 +13,7 @@ type chain[E any] struct {
 	tail  *node[E] // bottom of list
 	count int      // number of nodes in list
 	limit *int     // max allowed nodes in list (nil = no max)
+	items []E      // items in a slice
 }
 
 // Create a new chain and return a pointer to it
@@ -22,6 +23,7 @@ func newChain[E any](limit *int) *chain[E] {
 		tail:  nil,
 		count: 0,
 		limit: limit,
+		items: []E{},
 	}
 }
 
@@ -36,6 +38,10 @@ func (l *chain[E]) addToHead(n *node[E]) {
 		n.next.prev = n
 		l.head = n
 	}
+
+	// prepend to items
+	l.items = append([]E{n.item}, l.items...)
+	// increment countÍ
 	l.count++
 }
 
@@ -56,6 +62,9 @@ func (l *chain[E]) removeHead() *node[E] {
 		l.head = nil
 	}
 
+	// remove from items
+	l.items = l.items[1:]
+
 	// remove from count
 	l.count--
 	return oldHead
@@ -71,6 +80,8 @@ func (l *chain[E]) removeTail() *node[E] {
 	if l.tail != nil {
 		l.tail.next = nil
 	}
+
+	l.items = l.items[:len(l.items)-1]
 	l.count--
 	return n
 }
