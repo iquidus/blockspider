@@ -1,6 +1,8 @@
 package common
 
 import (
+	"errors"
+
 	"github.com/iquidus/blockspider/util"
 )
 
@@ -28,19 +30,32 @@ type RawBlock struct {
 	TransactionsRoot string           `bson:"transactionsRoot" json:"transactionsRoot"`
 }
 
-func (b *RawBlock) Convert(rpcClient RPCClient) (Block, error) {
+// TODO(iquidus): refactor this, separate out txn receipts without introducing any additional looping
+func (b *RawBlock) Convert(rpcClient *RPCClient, receipts *[]RawTransactionReceipt) (Block, error) {
+	// make sure we have either an rpc client or txn receipts
+	if receipts == nil && rpcClient == nil {
+		return Block{}, errors.New("cannot convert block without receipts or rpc client")
+	}
+
 	baseFeePerGas := util.DecodeValueHex(b.BaseFeePerGas)
 	// handle getting logs and txn receipts here
 	txns := make([]Transaction, len(b.Transactions))
 	var logs []Log
 	for i, txn := range b.Transactions {
-		// get transaction receipts
-		receipt, err := rpcClient.GetTransactionReceipt(txn.Hash)
-		if err != nil {
-			return Block{}, err
+		var receipt RawTransactionReceipt
+		if receipts != nil {
+			receipt = (*receipts)[i]
+		} else {
+			// get transaction receipts
+			r, err := rpcClient.GetTransactionReceipt(txn.Hash)
+			if err != nil {
+				return Block{}, err
+			}
+			receipt = *r
 		}
+
 		// convert raw txn to txn
-		txns[i] = txn.Convert(*receipt)
+		txns[i] = txn.Convert(receipt)
 
 		// get logs
 		for _, log := range receipt.Logs {

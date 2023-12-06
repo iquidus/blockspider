@@ -75,7 +75,7 @@ func (c *Crawler) crawlBlocks() {
 			}
 
 			// convert remote block to common.Block
-			block, err := rawBlock.Convert(*c.rpc)
+			block, err := rawBlock.Convert(c.rpc, nil)
 			if err != nil {
 				syncLogger.Error("failed converting block", "err", err)
 				c.state.Syncing = false
@@ -120,7 +120,7 @@ func (c *Crawler) validateBlock() (*common.Block, *common.Block, bool, error) {
 			return &local, nil, true, nil
 		} else {
 			// convert remote block to common.Block
-			remote, err := rawRemote.Convert(*c.rpc)
+			remote, err := rawRemote.Convert(c.rpc, nil)
 			if err != nil {
 				return nil, nil, false, err
 			}
