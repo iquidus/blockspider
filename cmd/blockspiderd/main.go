@@ -83,7 +83,7 @@ func main() {
 	}
 
 	// convert raw block to common.Block
-	startBlock, err := rawStartBlock.Convert(*rpcClient)
+	startBlock, err := rawStartBlock.Convert(rpcClient, nil)
 	if err != nil {
 		log.Error("could not convert start block", "err", err)
 		os.Exit(1)
