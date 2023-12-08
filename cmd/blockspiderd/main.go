@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/url"
@@ -93,7 +94,12 @@ func main() {
 		log.Error("could not retrieve start block", "err", err)
 		os.Exit(1)
 	}
-
+	if rawStartBlock.Hash == "" {
+		// empty block with no err, possible future blocknumber, abort
+		err = errors.New("block not found")
+		log.Error("could not retrieve start block", "err", err)
+		os.Exit(1)
+	}
 	// convert raw block to common.Block
 	startBlock, err := rawStartBlock.Convert(rpcClient, nil)
 	if err != nil {
@@ -101,14 +107,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	state, err := state.Init(&cfg.State, &cfg.ChainId, startBlock)
+	s, err := state.Init(&cfg.State, &cfg.ChainId, startBlock)
 	if err != nil {
 		log.Error("could not initialize state", "err", err)
 		os.Exit(1)
 	}
 
 	// TODO(iquidus): init kafka here, check for topics, create if they dont exist.
-	go startCrawler(&cfg.Crawler, state, rpcClient, appLogger)
+	go startCrawler(&cfg.Crawler, s, rpcClient, appLogger)
 
 	quit := make(chan int)
 	<-quit
