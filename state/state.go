@@ -17,8 +17,8 @@ type State struct {
 }
 
 type StateData struct {
-	ChainId   *uint64      `json:"chainId"`
-	Timestamp int64        `json:"updated"`
+	ChainId   *uint64 `json:"chainId"`
+	Timestamp int64   `json:"updated"`
 }
 
 type Config struct {
@@ -27,9 +27,9 @@ type Config struct {
 }
 
 type StateFile struct {
-	ChainId   *uint64      `json:"chainId"`
-	Timestamp int64        `json:"updated"`
-	Cache []common.Block `json:"cache"`
+	ChainId   *uint64        `json:"chainId"`
+	Timestamp int64          `json:"updated"`
+	Cache     []common.Block `json:"cache"`
 }
 
 var state *StateData = nil
@@ -90,7 +90,7 @@ func (s *State) save() error {
 	var sf = StateFile{
 		ChainId:   state.ChainId,
 		Timestamp: time.Now().Unix(),
-		Cache: s.Cache.Items(),
+		Cache:     s.Cache.Items(),
 	}
 	err := disk.WriteJsonFile[StateFile](sf, s.Config.Path, 0644)
 	if err != nil {
