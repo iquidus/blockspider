@@ -31,16 +31,13 @@ func (c *Crawler) crawlBlocks() {
 	// set syncing true to block additional syncs
 	c.state.Syncing = true
 
-	// get local head
-	state, err := c.state.Get()
-	if err != nil || state == nil {
+	localHead, err := c.state.Cache.Peak()
+	if err != nil {
 		c.logger.Error("couldn't get head from state", "err", err)
 		return
 	}
-
-	// add head to cache
-	c.state.Cache.Push(state.Head)
-	c.logger.Debug("fetched block from local state", "number", state.Head)
+	
+	c.logger.Debug("fetched block from local state", "number", localHead.Number)
 
 	// get remote head
 	chainHead, err := c.rpc.LatestBlockNumber()
@@ -50,7 +47,7 @@ func (c *Crawler) crawlBlocks() {
 	c.logger.Debug("fetched block from node", "number", chainHead)
 
 	// set current block to head + 1
-	currentBlock := state.Head.Number + 1
+	currentBlock := localHead.Number + 1
 
 	// create and start sync logger
 	syncLogger := c.logger.New()
@@ -95,7 +92,7 @@ func (c *Crawler) crawlBlocks() {
 	}
 
 	abort := taskChain.Finish()
-
+	c.state.Save()
 	if abort {
 		syncLogger.Debug("Aborted sync")
 	} else {
@@ -285,15 +282,6 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 			if err != nil {
 				c.logger.Error("Failed to determine common ancestor", "err", err)
 			}
-			newHead, err := c.state.Cache.Peak()
-			if err != nil {
-				c.logger.Error("Failed to peak head from cache", "err", err)
-			}
-			err = c.state.Update(newHead)
-			if err != nil {
-				c.logger.Error("Failed to update local state after reorg", "err", err)
-				return
-			}
 			// abort sync
 			task.AbortSync()
 			return
@@ -306,13 +294,6 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	err = c.sendBlockMessage(&block)
 	if err != nil {
 		c.logger.Error("Failed to send block hook", "err", err)
-	}
-
-	// write block to state
-	err = c.state.Update(block)
-	if err != nil {
-		c.logger.Error("err", err)
-		return
 	}
 
 	// add block to cache for next iteration

@@ -18,7 +18,6 @@ type State struct {
 
 type StateData struct {
 	ChainId   *uint64      `json:"chainId"`
-	Head      common.Block `json:"head"`
 	Timestamp int64        `json:"updated"`
 }
 
@@ -28,10 +27,9 @@ type Config struct {
 }
 
 type StateFile struct {
-	ChainId   *uint64        `json:"chainId"`
-	Head      common.Block   `json:"head"`
-	Timestamp int64          `json:"updated"`
-	Cache     []common.Block `json:"cache,omitempty"`
+	ChainId   *uint64      `json:"chainId"`
+	Timestamp int64        `json:"updated"`
+	Cache []common.Block `json:"cache"`
 }
 
 var state *StateData = nil
@@ -49,9 +47,9 @@ func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error)
 		// set singleton
 		state = &StateData{
 			ChainId:   chainId,
-			Head:      startBlock,
 			Timestamp: time.Now().Unix(),
 		}
+		s.Cache.Push(startBlock)
 		// write to disc
 		err = s.save()
 		if err != nil {
@@ -61,34 +59,27 @@ func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error)
 	return s, nil
 }
 
-func (s *State) Get() (*StateData, error) {
-	if state != nil {
-		// state is set, return it
-		return state, nil
-	} else {
-		// read from disc
-		err := s.load()
-		if err != nil {
-			return nil, errors.New("State has not be initialized. run Init() first")
-		} else {
-			return state, nil
-		}
-	}
-}
-
-func (s *State) Update(block common.Block) error {
-	// s.Cache.Push(state.Head)
-	state.Head = block
-	state.Timestamp = time.Now().Unix()
+func (s *State) Save() error {
 	return s.save()
 }
 
 func (s *State) load() error {
 	lock.Lock()
 	defer lock.Unlock()
-	err := disk.ReadJsonFile[StateData](s.Config.Path, state)
+	var sf StateFile
+	err := disk.ReadJsonFile[StateFile](s.Config.Path, &sf)
 	if err != nil {
 		return err
+	}
+	state = &StateData{
+		ChainId:   sf.ChainId,
+		Timestamp: sf.Timestamp,
+	}
+	if sf.Cache == nil {
+		return errors.New("cache is nil")
+	}
+	for i := len(sf.Cache) - 1; i >= 0; i-- {
+		s.Cache.Push(sf.Cache[i])
 	}
 	return nil
 }
@@ -96,13 +87,12 @@ func (s *State) load() error {
 func (s *State) save() error {
 	lock.Lock()
 	defer lock.Unlock()
-	var payload = StateFile{
+	var sf = StateFile{
 		ChainId:   state.ChainId,
-		Head:      state.Head,
-		Timestamp: state.Timestamp,
-		// Cache: s.Cache.Items(),
+		Timestamp: time.Now().Unix(),
+		Cache: s.Cache.Items(),
 	}
-	err := disk.WriteJsonFile[StateFile](payload, s.Config.Path, 0644)
+	err := disk.WriteJsonFile[StateFile](sf, s.Config.Path, 0644)
 	if err != nil {
 		return err
 	}
