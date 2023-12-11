@@ -14,7 +14,7 @@ import (
 type Config struct {
 	Interval    string       `json:"interval"`
 	MaxRoutines int          `json:"routines"`
-	CacheLimit  int          `json:"cacheLimit"`
+	CacheLimit  int          `json:"cache"`
 	Start       uint64       `json:"start"`
 	Kafka       kafka.Config `json:"kafka"`
 }
