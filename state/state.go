@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iquidus/blockspider/cache"
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/disk"
 )
@@ -12,6 +13,7 @@ import (
 type State struct {
 	Syncing bool    `json:"syncing"`
 	Config  *Config `json:"config"`
+	Cache   *cache.BlockStack[common.Block]
 }
 
 type StateData struct {
@@ -21,7 +23,15 @@ type StateData struct {
 }
 
 type Config struct {
-	Path string `json:"path"`
+	Path       string `json:"path"`
+	CacheLimit int    `json:"cache"`
+}
+
+type StateFile struct {
+	ChainId   *uint64        `json:"chainId"`
+	Head      common.Block   `json:"head"`
+	Timestamp int64          `json:"updated"`
+	Cache     []common.Block `json:"cache,omitempty"`
 }
 
 var state *StateData = nil
@@ -32,8 +42,9 @@ func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error)
 	s := &State{
 		Syncing: false,
 		Config:  cfg,
+		Cache:   cache.New[common.Block](&cfg.CacheLimit),
 	}
-	err := load(cfg.Path)
+	err := s.load()
 	if err != nil {
 		// set singleton
 		state = &StateData{
@@ -42,7 +53,7 @@ func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error)
 			Timestamp: time.Now().Unix(),
 		}
 		// write to disc
-		err = save(cfg.Path)
+		err = s.save()
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +67,7 @@ func (s *State) Get() (*StateData, error) {
 		return state, nil
 	} else {
 		// read from disc
-		err := load(s.Config.Path)
+		err := s.load()
 		if err != nil {
 			return nil, errors.New("State has not be initialized. run Init() first")
 		} else {
@@ -66,25 +77,32 @@ func (s *State) Get() (*StateData, error) {
 }
 
 func (s *State) Update(block common.Block) error {
+	// s.Cache.Push(state.Head)
 	state.Head = block
 	state.Timestamp = time.Now().Unix()
-	return save(s.Config.Path)
+	return s.save()
 }
 
-func load(path string) error {
+func (s *State) load() error {
 	lock.Lock()
 	defer lock.Unlock()
-	err := disk.ReadJsonFile[StateData](path, state)
+	err := disk.ReadJsonFile[StateData](s.Config.Path, state)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func save(path string) error {
+func (s *State) save() error {
 	lock.Lock()
 	defer lock.Unlock()
-	err := disk.WriteJsonFile[StateData](*state, path, 0644)
+	var payload = StateFile{
+		ChainId:   state.ChainId,
+		Head:      state.Head,
+		Timestamp: state.Timestamp,
+		// Cache: s.Cache.Items(),
+	}
+	err := disk.WriteJsonFile[StateFile](payload, s.Config.Path, 0644)
 	if err != nil {
 		return err
 	}

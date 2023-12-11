@@ -4,7 +4,6 @@
     "start": 0,
     "interval": "1000ms",
     "routines": 1,
-    "cache": 128,
     "kafka": {
       "broker": "localhost:9092",
       "params": [
@@ -21,7 +20,8 @@
     "endpoint": "http://127.0.0.1:8079"
   },
   "state": {
-    "path": "/Users/iquidus/blockspider/ubiq.json"
+    "path": "/Users/iquidus/blockspider/ubiq.json",
+    "cache": 128,
   },
   "transmute": {
     "port": 8080,

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/iquidus/blockspider/cache"
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/state"
@@ -25,17 +24,15 @@ type Crawler struct {
 	cfg     *Config
 	logChan chan *logObject
 	state   *state.State
-	cache   *cache.BlockStack[common.Block]
 	logger  log.Logger
 	writer  *kafka.Writer
 }
 
 func NewCrawler(cfg *Config, state *state.State, rpc *common.RPCClient, logger log.Logger) *Crawler {
-	bc := cache.New[common.Block](&cfg.CacheLimit)
 	// create kafka writer
 	kw := kafka.NewWriter(cfg.Kafka.Broker, nil, 1)
 
-	return &Crawler{rpc, cfg, make(chan *logObject), state, bc, logger, kw}
+	return &Crawler{rpc, cfg, make(chan *logObject), state, logger, kw}
 }
 
 func runCrawler(ticker *time.Ticker, c Crawler) {

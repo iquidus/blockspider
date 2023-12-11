@@ -39,7 +39,7 @@ func (c *Crawler) crawlBlocks() {
 	}
 
 	// add head to cache
-	c.cache.Push(state.Head)
+	c.state.Cache.Push(state.Head)
 	c.logger.Debug("fetched block from local state", "number", state.Head)
 
 	// get remote head
@@ -107,9 +107,9 @@ func (c *Crawler) crawlBlocks() {
 // returns the valid block, dropped block, isValid, error
 func (c *Crawler) validateBlock() (*common.Block, *common.Block, bool, error) {
 	// if there's no blocks in chain bail out
-	if c.cache.Count() > 0 {
+	if c.state.Cache.Count() > 0 {
 		// remove local block from cache
-		local, _ := c.cache.Pop()
+		local, _ := c.state.Cache.Pop()
 		// fetch remote block from node
 		rawRemote, err := c.rpc.GetBlockByHeight(local.Number)
 		if err != nil {
@@ -167,7 +167,7 @@ func (c *Crawler) reorg() error {
 	// log common ancenstor
 	c.logger.Warn("Common ancestor found", "block", commonAncestor.Number, "hash", commonAncestor.Hash)
 	// common ancestor was popped off the chain during above loop, push it back on
-	c.cache.Push(*commonAncestor)
+	c.state.Cache.Push(*commonAncestor)
 
 	// process old blocks
 	for i := 0; i < len(dropped); i++ {
@@ -180,7 +180,7 @@ func (c *Crawler) reorg() error {
 
 	// process new blocks
 	for i := len(sidechain) - 1; i >= 0; i-- {
-		c.cache.Push(sidechain[i])
+		c.state.Cache.Push(sidechain[i])
 		c.logger.Info("Adding remote block", "number", sidechain[i].Number, "hash", sidechain[i].Hash)
 		err := c.sendBlockMessage(&dropped[i])
 		if err != nil {
@@ -276,7 +276,7 @@ func (c *Crawler) sendReorgHooks(block common.Block) error {
 
 func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	// get parent block from cache
-	parent, err := c.cache.Peak()
+	parent, err := c.state.Cache.Peak()
 	if err == nil {
 		if parent.Hash != block.ParentHash {
 			// A reorg has occurred
@@ -285,7 +285,7 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 			if err != nil {
 				c.logger.Error("Failed to determine common ancestor", "err", err)
 			}
-			newHead, err := c.cache.Peak()
+			newHead, err := c.state.Cache.Peak()
 			if err != nil {
 				c.logger.Error("Failed to peak head from cache", "err", err)
 			}
@@ -316,7 +316,7 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	}
 
 	// add block to cache for next iteration
-	c.cache.Push(block)
+	c.state.Cache.Push(block)
 
 	// log
 	c.log(block.Number, len(block.Logs))
