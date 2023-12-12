@@ -36,7 +36,7 @@ func (c *Crawler) crawlBlocks() {
 		c.logger.Error("couldn't get head from state", "err", err)
 		return
 	}
-	
+
 	c.logger.Debug("fetched block from local state", "number", localHead.Number)
 
 	// get remote head

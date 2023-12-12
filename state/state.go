@@ -17,8 +17,7 @@ type State struct {
 }
 
 type StateData struct {
-	ChainId   *uint64 `json:"chainId"`
-	Timestamp int64   `json:"updated"`
+	ChainId *uint64 `json:"chainId"`
 }
 
 type Config struct {
@@ -36,7 +35,7 @@ var state *StateData = nil
 var lock sync.Mutex
 
 // create new state instance
-func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error) {
+func Init(cfg *Config, chainId *uint64) (*State, error) {
 	s := &State{
 		Syncing: false,
 		Config:  cfg,
@@ -46,10 +45,8 @@ func Init(cfg *Config, chainId *uint64, startBlock common.Block) (*State, error)
 	if err != nil {
 		// set singleton
 		state = &StateData{
-			ChainId:   chainId,
-			Timestamp: time.Now().Unix(),
+			ChainId: chainId,
 		}
-		s.Cache.Push(startBlock)
 		// write to disc
 		err = s.save()
 		if err != nil {
@@ -72,8 +69,7 @@ func (s *State) load() error {
 		return err
 	}
 	state = &StateData{
-		ChainId:   sf.ChainId,
-		Timestamp: sf.Timestamp,
+		ChainId: sf.ChainId,
 	}
 	if sf.Cache == nil {
 		return errors.New("cache is nil")

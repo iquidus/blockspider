@@ -75,6 +75,7 @@ func main() {
 
 	mainLogger.Debug("printing config", "cfg", cfg)
 
+	// check node connection
 	rpcClient := common.NewRPCClient(&cfg.Rpc)
 	version, err := rpcClient.Ping()
 	if err != nil {
@@ -89,28 +90,40 @@ func main() {
 
 	mainLogger.Info("connected to rpc server", "version", version)
 
-	rawStartBlock, err := rpcClient.GetBlockByHeight(cfg.Crawler.Start)
-	if err != nil {
-		log.Error("could not retrieve start block", "err", err)
-		os.Exit(1)
-	}
-	if rawStartBlock.Hash == "" {
-		// empty block with no err, possible future blocknumber, abort
-		err = errors.New("block not found")
-		log.Error("could not retrieve start block", "err", err)
-		os.Exit(1)
-	}
-	// convert raw block to common.Block
-	startBlock, err := rawStartBlock.Convert(rpcClient, nil)
-	if err != nil {
-		log.Error("could not convert start block", "err", err)
-		os.Exit(1)
-	}
-
-	s, err := state.Init(&cfg.State, &cfg.ChainId, startBlock)
+	// Initialize state
+	s, err := state.Init(&cfg.State, &cfg.ChainId)
 	if err != nil {
 		log.Error("could not initialize state", "err", err)
 		os.Exit(1)
+	}
+	// Check if cache is empty
+	if s.Cache.Count() == 0 {
+		log.Info("cache is empty, using start block", "number", cfg.Crawler.Start)
+		rawStartBlock, err := rpcClient.GetBlockByHeight(cfg.Crawler.Start)
+		if err != nil {
+			log.Error("could not retrieve start block", "err", err)
+			os.Exit(1)
+		}
+		if rawStartBlock.Hash == "" {
+			// empty block with no err, possible future blocknumber, abort
+			err = errors.New("block not found")
+			log.Error("could not retrieve start block", "err", err)
+			os.Exit(1)
+		}
+
+		startBlock, err := rawStartBlock.Convert(rpcClient, nil)
+		if err != nil {
+			log.Error("could not convert start block", "err", err)
+			os.Exit(1)
+		}
+		s.Cache.Push(startBlock)
+	} else {
+		cachedHead, err := s.Cache.Peak()
+		if err != nil {
+			log.Error("could not retrieve cached head", "err", err)
+			os.Exit(1)
+		}
+		log.Info("resuming from cached block", "number", cachedHead.Number, "hash", cachedHead.Hash)
 	}
 
 	// TODO(iquidus): init kafka here, check for topics, create if they dont exist.
