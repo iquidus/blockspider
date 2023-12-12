@@ -300,12 +300,13 @@ func (c *Crawler) syncBlock(block common.Block, task *syncronizer.Task) {
 	c.state.Cache.Push(block)
 
 	// log
-	c.log(block.Number, len(block.Logs))
+	c.log(block.Number, len(block.Transactions), len(block.Logs))
 }
 
-func (c *Crawler) log(blockNo uint64, txns int) {
+func (c *Crawler) log(blockNo uint64, txns int, logs int) {
 	c.logChan <- &logObject{
 		blockNo: blockNo,
 		txns:    txns,
+		logs:    logs,
 	}
 }
