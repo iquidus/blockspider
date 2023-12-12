@@ -38,7 +38,6 @@ _Make required changes in config.json_
     "start": 0, // start block
     "interval": "10000ms", // polling interval. e.g 0.5 * target block time
     "routines": 1, // go routines
-    "cache": 128, // number of blocks to keep in local cache. Must be larger than reorgs.
     "kafka": {
       "events": [
         {
@@ -59,7 +58,8 @@ _Make required changes in config.json_
     "endpoint": "http://127.0.0.1:8588"
   },
   "state": {
-    "path": "~/.blockspider/ubiq-mainnet.json"
+    "path": "~/.blockspider/ubiq-mainnet.json",
+    "cache": 128, // number of blocks to keep in local cache. Must be larger than reorgs.
   }
 }
 ```
