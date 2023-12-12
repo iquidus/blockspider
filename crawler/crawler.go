@@ -28,11 +28,8 @@ type Crawler struct {
 	writer  *kafka.Writer
 }
 
-func NewCrawler(cfg *Config, state *state.State, rpc *common.RPCClient, logger log.Logger) *Crawler {
-	// create kafka writer
-	kw := kafka.NewWriter(cfg.Kafka.Broker, nil, 1)
-
-	return &Crawler{rpc, cfg, make(chan *logObject), state, logger, kw}
+func NewCrawler(cfg *Config, state *state.State, rpc *common.RPCClient, writer *kafka.Writer, logger log.Logger) *Crawler {
+	return &Crawler{rpc, cfg, make(chan *logObject), state, logger, writer}
 }
 
 func runCrawler(ticker *time.Ticker, c Crawler) {
