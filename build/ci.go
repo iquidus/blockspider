@@ -217,7 +217,7 @@ func doTest(cmdline []string) {
 		dlgo     = flag.Bool("dlgo", false, "Download Go and build with it")
 		arch     = flag.String("arch", "", "Run tests for given architecture")
 		cc       = flag.String("cc", "", "Sets C compiler binary")
-		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
+		coverage = flag.Bool("coverage", true, "Whether to record code coverage")
 		verbose  = flag.Bool("v", false, "Whether to log verbosely")
 		race     = flag.Bool("race", false, "Execute the race detector")
 		timeout  = flag.String("timeout", "", "Timeout limit")
