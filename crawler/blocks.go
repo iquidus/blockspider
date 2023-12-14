@@ -228,20 +228,20 @@ Logs:
 }
 
 func (c *Crawler) sendBlockMessage(block *common.Block) error {
-	for _, ktopic := range c.cfg.Kafka.Params {
-		// nb := block
-		// filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
-		// nb.Logs = filteredLogs
+	for _, ktopic := range *c.writer.Params {
+		nb := block
+		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
+		nb.Logs = filteredLogs
 		var bp = kafka.Payload{
 			Status:  "ACCEPTED",
-			Block:   *block,
+			Block:   *nb,
 			Version: 1,
 		}
 		payload, err := json.Marshal(bp)
 		if err != nil {
 			return err
 		}
-		err = c.writer.WriteMessagesWithTopic(context.Background(), payload, ktopic.Topic)
+		err = c.writer.WriteMessages(context.Background(), payload, ktopic.Topic)
 		if err != nil {
 			return err
 		}
@@ -250,7 +250,7 @@ func (c *Crawler) sendBlockMessage(block *common.Block) error {
 }
 
 func (c *Crawler) sendReorgHooks(block common.Block) error {
-	for _, ktopic := range c.cfg.Kafka.Params {
+	for _, ktopic := range *c.writer.Params {
 		nb := block
 		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
 		nb.Logs = filteredLogs
@@ -263,7 +263,7 @@ func (c *Crawler) sendReorgHooks(block common.Block) error {
 		if err != nil {
 			return err
 		}
-		err = c.writer.WriteMessagesWithTopic(context.Background(), payload, ktopic.Topic)
+		err = c.writer.WriteMessages(context.Background(), payload, ktopic.Topic)
 		if err != nil {
 			return err
 		}

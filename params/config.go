@@ -3,6 +3,7 @@ package params
 import (
 	"github.com/iquidus/blockspider/common"
 	"github.com/iquidus/blockspider/crawler"
+	"github.com/iquidus/blockspider/kafka"
 	"github.com/iquidus/blockspider/state"
 )
 
@@ -17,5 +18,6 @@ type Config struct {
 	Crawler   crawler.Config   `json:"crawler"`
 	Rpc       common.RPCConfig `json:"rpc"`
 	State     state.Config     `json:"state"`
+	Kafka     kafka.Config     `json:"kafka"`
 	Transmute TransmuteConfig  `json:"transmute"`
 }

@@ -8,36 +8,23 @@ import (
 
 type Writer struct {
 	Writer *kafka.Writer
+	Params *[]TopicParams
 }
 
-func NewWriter(broker string, topic *string, batchSize int) *Writer {
-	var writer kafka.Writer
-	if topic != nil {
-		writer = kafka.Writer{
-			Addr:                   kafka.TCP(broker),
-			Topic:                  *topic,
-			Balancer:               &kafka.LeastBytes{},
-			BatchSize:              batchSize,
-			AllowAutoTopicCreation: true,
-		}
-	} else {
-		writer = kafka.Writer{
-			Addr:                   kafka.TCP(broker),
-			Balancer:               &kafka.LeastBytes{},
-			BatchSize:              batchSize,
-			AllowAutoTopicCreation: true,
-		}
+func NewWriter(broker string, params []TopicParams, batchSize int) *Writer {
+	writer := kafka.Writer{
+		Addr:                   kafka.TCP(broker),
+		Balancer:               &kafka.LeastBytes{},
+		BatchSize:              batchSize,
+		AllowAutoTopicCreation: true,
 	}
 
 	return &Writer{
 		Writer: &writer,
+		Params: &params,
 	}
 }
 
-func (w *Writer) WriteMessages(ctx context.Context, payload []byte) error {
-	return w.Writer.WriteMessages(ctx, kafka.Message{Value: payload})
-}
-
-func (w *Writer) WriteMessagesWithTopic(ctx context.Context, payload []byte, topic string) error {
+func (w *Writer) WriteMessages(ctx context.Context, payload []byte, topic string) error {
 	return w.Writer.WriteMessages(ctx, kafka.Message{Value: payload, Topic: topic})
 }

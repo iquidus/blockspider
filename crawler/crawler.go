@@ -11,11 +11,10 @@ import (
 )
 
 type Config struct {
-	Interval    string       `json:"interval"`
-	MaxRoutines int          `json:"routines"`
-	CacheLimit  int          `json:"cache"`
-	Start       uint64       `json:"start"`
-	Kafka       kafka.Config `json:"kafka"`
+	Interval    string `json:"interval"`
+	MaxRoutines int    `json:"routines"`
+	CacheLimit  int    `json:"cache"`
+	Start       uint64 `json:"start"`
 }
 
 type Crawler struct {

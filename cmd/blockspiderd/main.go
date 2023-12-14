@@ -132,7 +132,7 @@ func main() {
 	}
 
 	// Create kafka writer
-	kw := kafka.NewWriter(cfg.Crawler.Kafka.Broker, nil, 1)
+	kw := kafka.NewWriter(cfg.Kafka.Broker, nil, 1)
 
 	// Start crawler
 	go startCrawler(&cfg.Crawler, s, rpcClient, kw, appLogger)

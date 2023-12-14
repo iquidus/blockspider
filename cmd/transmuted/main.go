@@ -71,24 +71,64 @@ func isValidSignatureForStringBody(body []byte, signature string, signingKey []b
 	return digest == signature
 }
 
-func sendBlockMessage(blockWriter *kafka.Writer, block common.Block) error {
-	var bp = kafka.Payload{
-		Status:  "ACCEPTED",
-		Block:   block,
-		Version: 1,
+func includes(addresses []string, a string) bool {
+	for _, addr := range addresses {
+		if addr == a {
+			return true
+		}
 	}
 
-	payload, err := json.Marshal(bp)
-	if err != nil {
-		return err
+	return false
+}
+
+// filterLogs creates a slice of logs matching the given criteria.
+func filterLogs(logs []common.Log, addresses []string, topics []string) []common.Log {
+	var ret []common.Log
+Logs:
+	for _, log := range logs {
+		if len(addresses) > 0 && !includes(addresses, log.Address) {
+			continue
+		}
+		// If the to filtered topics is greater than the amount of topics in logs, skip.
+		if len(topics) > len(log.Topics) {
+			continue Logs
+		}
+		for i, sub := range topics {
+			match := len(sub) == 0 // empty rule set == wildcard
+			for _, topic := range sub {
+				if log.Topics[i] == string(topic) {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue Logs
+			}
+		}
+		ret = append(ret, log)
 	}
+	return ret
+}
 
-	err = blockWriter.WriteMessages(context.Background(), payload)
-
-	if err != nil {
-		log.Error("failed to write messages", "err", err)
+func sendBlockMessage(blockWriter *kafka.Writer, block *common.Block) error {
+	for _, ktopic := range *blockWriter.Params {
+		nb := block
+		filteredLogs := filterLogs(nb.Logs, ktopic.Addresses, ktopic.Topics)
+		nb.Logs = filteredLogs
+		var bp = kafka.Payload{
+			Status:  "ACCEPTED",
+			Block:   *nb,
+			Version: 1,
+		}
+		payload, err := json.Marshal(bp)
+		if err != nil {
+			return err
+		}
+		err = blockWriter.WriteMessages(context.Background(), payload, ktopic.Topic)
+		if err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
@@ -123,7 +163,7 @@ func setupRouter(blockWriter *kafka.Writer, cfg params.TransmuteConfig) *gin.Eng
 		// convert to common block
 		block := event.Data.Block.Convert()
 		// send block to kafka
-		err = sendBlockMessage(blockWriter, block)
+		err = sendBlockMessage(blockWriter, &block)
 		if err != nil {
 			log.Info("failed to write messages", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -149,7 +189,7 @@ func main() {
 		log.Error("Error: could read config file", "err", err)
 	}
 	// Create blockwriter
-	kw := kafka.NewWriter(cfg.Crawler.Kafka.Broker, nil, 1)
+	kw := kafka.NewWriter(cfg.Kafka.Broker, nil, 1)
 	// Init gin router
 	r := setupRouter(kw, cfg.Transmute)
 	// Listen and Server
